@@ -15,8 +15,8 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 
-#define MIB (1UL << 20)
-#define MMAP_BYTES 4 * MIB
+#define MIB_SHIFT 20
+#define MMAP_BYTES 4 << MIB_SHIFT
 
 uintmax_t get_usec(void) {
     struct timeval t;
@@ -38,10 +38,13 @@ int main(void) {
         if (!buf) return EXIT_FAILURE;
 
         memset(buf, 0, MMAP_BYTES);
-        (void)buf;
 
+        /*
+         * cur_bytes isn't really needed if MMAP_BYTES is MiB-aligned, but it's
+         * possible we want to change MMAP_BYTES to something specific
+         */
         cur_bytes += MMAP_BYTES;
-        cur_mb = cur_bytes / MIB;
+        cur_mb = cur_bytes >> MIB_SHIFT;
 
         if (cur_mb == last_mb) continue;
 
