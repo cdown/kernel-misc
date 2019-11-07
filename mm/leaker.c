@@ -18,44 +18,49 @@
 #define MIB_SHIFT 20
 #define MMAP_BYTES 4 << MIB_SHIFT
 
-uintmax_t get_usec(void) {
-    struct timeval t;
-    gettimeofday(&t, NULL);
-    return (uintmax_t)t.tv_sec * 1000000 + t.tv_usec;
+uintmax_t get_usec(void)
+{
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	return (uintmax_t)t.tv_sec * 1000000 + t.tv_usec;
 }
 
-int main(void) {
-    uintmax_t last_time = get_usec(), cur_bytes = 0;
-    unsigned int last_mb = 0;
+int main(void)
+{
+	uintmax_t last_time = get_usec(), cur_bytes = 0;
+	unsigned int last_mb = 0;
 
-    while (1) {
-        char* buf;
-        unsigned int cur_mb;
-        uintmax_t this_time;
+	while (1) {
+		char *buf;
+		unsigned int cur_mb;
+		uintmax_t this_time;
 
-        buf = mmap(NULL, MMAP_BYTES, PROT_READ | PROT_WRITE,
-                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-        if (!buf) return EXIT_FAILURE;
+		buf = mmap(NULL, MMAP_BYTES, PROT_READ | PROT_WRITE,
+			   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+		if (!buf)
+			return EXIT_FAILURE;
 
-        memset(buf, 0, MMAP_BYTES);
+		memset(buf, 0, MMAP_BYTES);
 
-        /*
-         * cur_bytes isn't really needed if MMAP_BYTES is MiB-aligned, but it's
-         * possible we want to change MMAP_BYTES to something specific
-         */
-        cur_bytes += MMAP_BYTES;
-        cur_mb = cur_bytes >> MIB_SHIFT;
+		/*
+		 * cur_bytes isn't really needed if MMAP_BYTES is MiB-aligned,
+		 * but it's possible we want to change MMAP_BYTES to something
+		 * specific
+		 */
+		cur_bytes += MMAP_BYTES;
+		cur_mb = cur_bytes >> MIB_SHIFT;
 
-        if (cur_mb == last_mb) continue;
+		if (cur_mb == last_mb)
+			continue;
 
-        /* we're on to a new mb */
-        this_time = get_usec();
-        printf("%d %ju\n", cur_mb, (this_time - last_time));
-        last_time = this_time;
-        last_mb = cur_mb;
+		/* we're on to a new mb */
+		this_time = get_usec();
+		printf("%d %ju\n", cur_mb, (this_time - last_time));
+		last_time = this_time;
+		last_mb = cur_mb;
 
-        /* buf is leaked */
-    }
+		/* buf is leaked */
+	}
 
-    return EXIT_SUCCESS;
+	return EXIT_SUCCESS;
 }
