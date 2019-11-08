@@ -1,0 +1,68 @@
+#!/bin/bash -ex
+
+# Exercise new swapextend syscall.
+
+swap_file=/se_swapfile
+next_megs=1
+
+_resize_file() {
+    local _new_megs=${1?}
+    fallocate -l "$_new_megs"M "$swap_file"
+}
+
+_swapextend() {
+    local _new_size=${1:-0}
+    ./swapextend "$swap_file" "$_new_size"
+}
+
+die() {
+    local _exit_code=${1?}
+    local _msg=${2?}
+    printf 'FATAL: %s\n' "$_msg" >&2
+    exit "$_exit_code"
+}
+
+swapextend() {
+    local _new_megs=${1?}
+    _resize_file "$_new_megs"
+    _swapextend 0
+}
+
+cleanup() {
+    # Make sure we only use our swap_file to have the maximum chance to find
+    # issues
+    swapoff -a
+    rm -f "$swap_file"
+}
+
+setup() {
+    make swapextend
+    _resize_file "$next_megs"
+    (( next_megs++ ))
+    chmod 600 "$swap_file"
+    mkswap "$swap_file"
+    swapon "$swap_file"
+}
+
+main() {
+    trap cleanup EXIT
+    setup
+
+    if (( $# == 0 )); then
+        mode=stress
+    else
+        case $1 in
+            --stress) mode=stress ;;
+            --slow) mode=slow ;;
+            *) die 1 "Unknown mode: $1" ;;
+        esac
+    fi
+
+    while true; do
+        swapextend "$next_megs"
+        (( next_megs++ ))
+        [[ $mode == slow ]] && sleep 60
+    done
+}
+
+main "$@"
