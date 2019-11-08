@@ -58,7 +58,7 @@ main() {
         esac
     fi
 
-    while true; do
+    while (( next_megs < 200 )); do
         swapextend "$next_megs"
         (( next_megs++ ))
         [[ $mode == slow ]] && sleep 60
