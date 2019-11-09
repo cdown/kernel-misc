@@ -37,6 +37,7 @@ cleanup() {
 
 setup() {
     make swapextend
+    cleanup
     _resize_file "$next_megs"
     (( next_megs++ ))
     chmod 600 "$swap_file"
