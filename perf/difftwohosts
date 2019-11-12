@@ -1,0 +1,16 @@
+#!/bin/bash -ex
+
+host1="${1?}"
+host2="${2?}"
+time="${3:-60}"
+
+ssh "$host1" "sudo perf record -a -o host1.data -e cycles:k sleep $time && sudo chown "'$USER'" host1.data" &
+ssh "$host2" "sudo perf record -a -o host2.data -e cycles:k sleep $time && sudo chown "'$USER'" host2.data" &
+
+wait
+
+scp "$host1":host1.data host1.perf
+scp "$host2":host2.data host2.perf
+
+perf diff --kallsyms <(ssh "$host1" 'cat /proc/kallsyms') host1.perf host2.perf |
+    sort -rg -k2 | awk '{ print $1 " " $2 " " $5 }' | head -20
