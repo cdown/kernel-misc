@@ -38,6 +38,11 @@ cleanup() {
 setup() {
     make swapextend
     cleanup
+
+    # Prepare for btrfs
+    truncate -s 0 "$swap_file"
+    chattr +C "$swap_file"
+
     _resize_file "$next_megs"
     (( next_megs++ ))
     chmod 600 "$swap_file"
