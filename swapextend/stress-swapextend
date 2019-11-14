@@ -2,6 +2,8 @@
 
 # Exercise new swapextend syscall.
 
+: "${SCNR:=437}"
+
 swap_file=/se_swapfile
 next_megs=1
 
@@ -12,7 +14,7 @@ _resize_file() {
 
 _swapextend() {
     local _new_size=${1:-0}
-    ./swapextend "$swap_file" "$_new_size"
+    ./swapextend "$SCNR" "$swap_file" "$_new_size"
 }
 
 die() {

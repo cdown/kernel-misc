@@ -10,21 +10,21 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define SYS_swapextend 437
-
 int main(int argc, char *argv[])
 {
 	int ret;
+	int SYS_swapextend;
 	const char *filename = NULL;
 	long desired_size;
 
-	if (argc != 3) {
+	if (argc != 4) {
 		fprintf(stderr, "usage: %s filename size\n", argv[0]);
 		return 1;
 	}
 
-	filename = argv[1];
-	desired_size = strtol(argv[2], NULL, 10);
+	SYS_swapextend = atoi(argv[1]);
+	filename = argv[2];
+	desired_size = strtol(argv[3], NULL, 10);
 
 	ret = syscall(SYS_swapextend, filename, desired_size);
 	printf("%d\n", ret);
