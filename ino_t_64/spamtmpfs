@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+# bash uses signed long for numbers. since we're testing on 64-bit, that's ok.
+long_size=$(getconf LONG_BIT)
+if [[ "$long_size" != 64 ]]; then
+    printf 'Nice arch you got yourself there pal: %d\n' "$long_size"
+fi
+
+for (( i=0; ; i++ )); do
+    file=/dev/shm/spamtmpfs
+    touch "$file".{1..10000}
+    rm "$file".{1..10000}
+
+    if (( i % 10 == 0 )); then
+        printf '%s\n' "$(( i * 10000 ))"
+    fi
+done
