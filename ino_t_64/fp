@@ -1,0 +1,55 @@
+#!/bin/bash -e
+
+git format-patch \
+    --cover-letter \
+    --thread \
+    --to linux-fsdevel@vger.kernel.org \
+    --cc 'Al Viro <viro@zeniv.linux.org.uk>' \
+    --cc 'Matthew Wilcox <willy@infradead.org>' \
+    --cc 'Amir Goldstein <amir73il@gmail.com>' \
+    --cc 'Jeff Layton <jlayton@kernel.org>' \
+    --cc 'Johannes Weiner <hannes@cmpxchg.org>' \
+    --cc 'Tejun Heo <tj@kernel.org>' \
+    --cc linux-kernel@vger.kernel.org \
+    --cc kernel-team@fb.com \
+    master..
+
+sed -i 's/\*\*\* SUBJECT HERE \*\*\*/fs: inode: shmem: Reduce risk of inum overflow/' 0000-cover-letter.patch
+
+cat << 'EOF' >> 0000-cover-letter.patch
+In Facebook production we are seeing heavy i_ino wraparounds on tmpfs.
+On affected tiers, in excess of 10% of hosts show multiple files with
+different content and the same inode number, with some servers even
+having as many as 150 duplicated inode numbers with differing file
+content.
+
+This causes actual, tangible problems in production. For example, we
+have complaints from those working on remote caches that their
+application is reporting cache corruptions because it uses (device,
+inodenum) to establish the identity of a particular cache object, but
+because it's not unique any more, the application refuses to continue
+and reports cache corruption. Even worse, sometimes applications may not
+even detect the corruption but may continue anyway, causing phantom and
+hard to debug behaviour.
+
+In general, userspace applications expect that (device, inodenum) should
+be enough to be uniquely point to one inode, which seems fair enough.
+One might also need to check the generation, but in this case:
+
+1. That's not currently exposed to userspace
+   (ioctl(...FS_IOC_GETVERSION...) returns ENOTTY on tmpfs);
+2. Even with generation, there shouldn't be two live inodes with the
+   same inode number on one device.
+
+In order to mitigate this, we take a two-pronged approach:
+
+1. A mitigation that works both for 32- and 64-bit inodes: we reuse
+   inode numbers from recycled slabs where possible (ie. where the
+   filesystem uses their own private inode slabs instead of shared inode
+   slabs), allowing us to significantly reduce the risk of 32 bit
+   wraparound.
+2. A fix that works on machines with 64-bit ino_t only: we allow users
+   to mount tmpfs with a new inode64 option that uses the full width of
+   ino_t. Other filesystems can also use get_next_ino_full to get
+   similar behaviour as desired.
+EOF
