@@ -43,13 +43,10 @@ One might also need to check the generation, but in this case:
 
 In order to mitigate this, we take a two-pronged approach:
 
-1. A mitigation that works both for 32- and 64-bit inodes: we reuse
-   inode numbers from recycled slabs where possible (ie. where the
-   filesystem uses their own private inode slabs instead of shared inode
-   slabs), allowing us to significantly reduce the risk of 32 bit
-   wraparound.
-2. A fix that works on machines with 64-bit ino_t only: we allow users
-   to mount tmpfs with a new inode64 option that uses the full width of
-   ino_t. Other filesystems can also use get_next_ino_full to get
-   similar behaviour as desired.
+1. Moving inum generation from being global to per-sb for tmpfs. This
+   itself allows some reduction in i_ino churn. This works on both 64-
+   and 32- bit machines.
+2. Adding inode{64,32} for tmpfs. This fix is supported on machines with
+   64-bit ino_t only: we allow users to mount tmpfs with a new inode64
+   option that uses the full width of ino_t, or CONFIG_TMPFS_INODE64.
 EOF
