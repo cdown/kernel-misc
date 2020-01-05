@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-ver=4
+ver=5
 cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
