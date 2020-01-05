@@ -1,9 +1,12 @@
 #!/bin/bash -e
 
+ver=4
+cov_file="v${ver}-0000-cover-letter.patch"
+
 git format-patch \
     --cover-letter \
     --thread \
-    -v4 \
+    -v "$ver" \
     --to linux-mm@vger.kernel.org \
     --cc 'Hugh Dickins <hughd@google.com>' \
     --cc 'Andrew Morton <akpm@linux-foundation.org>' \
@@ -18,9 +21,9 @@ git format-patch \
     --cc kernel-team@fb.com \
     master..
 
-sed -i 's/\*\*\* SUBJECT HERE \*\*\*/fs: inode: shmem: Reduce risk of inum overflow/' 0000-cover-letter.patch
+sed -i 's/\*\*\* SUBJECT HERE \*\*\*/fs: inode: shmem: Reduce risk of inum overflow/' "$cov_file"
 
-cat << 'EOF' >> 0000-cover-letter.patch
+cat << 'EOF' >> "$cov_file"
 In Facebook production we are seeing heavy i_ino wraparounds on tmpfs.
 On affected tiers, in excess of 10% of hosts show multiple files with
 different content and the same inode number, with some servers even
