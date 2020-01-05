@@ -3,6 +3,7 @@
 git format-patch \
     --cover-letter \
     --thread \
+    -v4 \
     --to linux-mm@vger.kernel.org \
     --cc 'Hugh Dickins <hughd@google.com>' \
     --cc 'Andrew Morton <akpm@linux-foundation.org>' \
