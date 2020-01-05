@@ -49,4 +49,10 @@ In order to mitigate this, we take a two-pronged approach:
 2. Adding inode{64,32} for tmpfs. This fix is supported on machines with
    64-bit ino_t only: we allow users to mount tmpfs with a new inode64
    option that uses the full width of ino_t, or CONFIG_TMPFS_INODE64.
+
+You can see how this compares to previous related patches which didn't
+implement this per-superblock:
+
+- https://patchwork.kernel.org/patch/11254001/
+- https://patchwork.kernel.org/patch/11023915/
 EOF
