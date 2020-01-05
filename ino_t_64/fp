@@ -3,13 +3,16 @@
 git format-patch \
     --cover-letter \
     --thread \
-    --to linux-fsdevel@vger.kernel.org \
+    --to linux-mm@vger.kernel.org \
+    --cc 'Hugh Dickins <hughd@google.com>' \
+    --cc 'Andrew Morton <akpm@linux-foundation.org>' \
     --cc 'Al Viro <viro@zeniv.linux.org.uk>' \
     --cc 'Matthew Wilcox <willy@infradead.org>' \
     --cc 'Amir Goldstein <amir73il@gmail.com>' \
     --cc 'Jeff Layton <jlayton@kernel.org>' \
     --cc 'Johannes Weiner <hannes@cmpxchg.org>' \
     --cc 'Tejun Heo <tj@kernel.org>' \
+    --cc linux-fsdevel@vger.kernel.org \
     --cc linux-kernel@vger.kernel.org \
     --cc kernel-team@fb.com \
     master..
