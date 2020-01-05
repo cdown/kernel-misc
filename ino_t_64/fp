@@ -21,7 +21,7 @@ git format-patch \
     --cc kernel-team@fb.com \
     master..
 
-sed -i 's/\*\*\* SUBJECT HERE \*\*\*/fs: inode: shmem: Reduce risk of inum overflow/' "$cov_file"
+sed -i 's/\*\*\* SUBJECT HERE \*\*\*/tmpfs: inode: Reduce risk of inum overflow/' "$cov_file"
 
 cat << 'EOF' >> "$cov_file"
 In Facebook production we are seeing heavy i_ino wraparounds on tmpfs.
