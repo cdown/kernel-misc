@@ -7,7 +7,7 @@ git format-patch \
     --cover-letter \
     --thread \
     -v "$ver" \
-    --to linux-mm@vger.kernel.org \
+    --to linux-mm@kvack.org \
     --cc 'Hugh Dickins <hughd@google.com>' \
     --cc 'Andrew Morton <akpm@linux-foundation.org>' \
     --cc 'Al Viro <viro@zeniv.linux.org.uk>' \
