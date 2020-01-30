@@ -31,7 +31,7 @@ swapextend() {
 }
 
 leak_forever() {
-    while :; do ./leaker >/dev/null; done
+    while :; do sudo systemd-run -q -p OOMScoreAdjust=1000 --wait ./leaker; done
 }
 
 cleanup() {
@@ -42,11 +42,13 @@ cleanup() {
 }
 
 setup() {
-    # Otherwise leaker might get killed.
+    # Otherwise we might get killed.
     echo -1000 > /proc/self/oom_score_adj
+    echo -1000 > /proc/"${PPID?}"/oom_score_adj
 
     # Otherwise the session might go away
     echo -1000 > /proc/"$(pgrep -ox systemd-logind)"/oom_score_adj
+
 
     make swapextend
     make leaker
@@ -84,7 +86,7 @@ main() {
         leak_forever &
     fi
 
-    while :; do
+    while true; do
         swapextend "$next_megs"
         (( next_megs++ ))
         if [[ $mode == leak ]] || [[ $mode == slow ]]; then
