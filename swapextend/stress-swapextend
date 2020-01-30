@@ -30,6 +30,10 @@ swapextend() {
     _swapextend 0
 }
 
+leak_forever() {
+    while :; do ./leaker >/dev/null; done
+}
+
 cleanup() {
     # Make sure we only use our swap_file to have the maximum chance to find
     # issues
@@ -38,7 +42,14 @@ cleanup() {
 }
 
 setup() {
+    # Otherwise leaker might get killed.
+    echo -1000 > /proc/self/oom_score_adj
+
+    # Otherwise the session might go away
+    echo -1000 > /proc/"$(pgrep -ox systemd-logind)"/oom_score_adj
+
     make swapextend
+    make leaker
     cleanup
 
     # Prepare for btrfs
@@ -62,14 +73,21 @@ main() {
         case $1 in
             --stress) mode=stress ;;
             --slow) mode=slow ;;
+            --leak) mode=leak ;;
             *) die 1 "Unknown mode: $1" ;;
         esac
     fi
 
-    while (( next_megs < 5000 )); do
+    if [[ $mode == leak ]]; then
+        leak_forever &
+    fi
+
+    while :; do
         swapextend "$next_megs"
         (( next_megs++ ))
-        [[ $mode == slow ]] && sleep 60
+        if [[ $mode == leak ]] || [[ $mode == slow ]]; then
+            sleep 5
+        fi
     done
 }
 
