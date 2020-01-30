@@ -2,7 +2,7 @@
 
 # Exercise new swapextend syscall.
 
-: "${SCNR:=437}"
+: "${SCNR:=439}"
 
 swap_file=/se_swapfile
 next_megs=1
