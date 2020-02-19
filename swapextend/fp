@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+ver=1
+cov_file="v${ver}-0000-cover-letter.patch"
+
+git format-patch \
+    --cover-letter \
+    --thread \
+    -v "$ver" \
+    --to 'Johannes Weiner <hannes@cmpxchg.org>' \
+    master..
+
+sed -i 's/\*\*\* SUBJECT HERE \*\*\*/mm: swap: Online swap extension/' "$cov_file"
+
+cat << 'EOF' >> "$cov_file"
+mememememory mamamamamamanegement
+EOF

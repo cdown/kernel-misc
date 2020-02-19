@@ -2,6 +2,11 @@
 
 # Exercise new swapextend syscall.
 
+# Typical usage:
+#
+# - In one terminal: ./stress-swapextend --slow
+# - In another: echo -1000 > /proc/self/oom_score_adj && while :; do systemd-run -p OOMScoreAdjust=1000 --wait --pty ./leaker; done
+
 : "${SCNR:=439}"
 
 swap_file=/se_swapfile
@@ -31,10 +36,19 @@ swapextend() {
 }
 
 leak_forever() {
-    while :; do sudo systemd-run -q -p OOMScoreAdjust=1000 --wait ./leaker; done
+    # Loop has -1000 adj, leaker itself has 1000 adj
+    while :; do
+        {
+            echo 1000 > /proc/self/oom_score_adj
+            ./leaker >/dev/null
+        } &
+    done &
+    echo "$!"
 }
 
 cleanup() {
+    [[ -v LEAKER_PID ]] && kill -9 "$LEAKER_PID"
+
     # Make sure we only use our swap_file to have the maximum chance to find
     # issues
     swapoff -a
@@ -48,6 +62,11 @@ setup() {
 
     # Otherwise the session might go away
     echo -1000 > /proc/"$(pgrep -ox systemd-logind)"/oom_score_adj
+
+    # Multiple for privsep
+    for pid in $(pgrep sshd); do
+        echo -1000 > /proc/"$pid"/oom_score_adj
+    done
 
 
     make swapextend
@@ -83,7 +102,7 @@ main() {
     fi
 
     if [[ $mode == leak ]]; then
-        leak_forever &
+        LEAKER_PID=$(leak_forever)
     fi
 
     while true; do
