@@ -7,7 +7,7 @@
 # - In one terminal: ./stress-swapextend --slow
 # - In another: echo -1000 > /proc/self/oom_score_adj && while :; do systemd-run -p OOMScoreAdjust=1000 --wait --pty ./leaker; done
 
-: "${SCNR:=439}"
+: "${SCNR:=500}"
 
 swap_file=/se_swapfile
 next_megs=1
