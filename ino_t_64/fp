@@ -1,21 +1,21 @@
 #!/bin/bash -e
 
-ver=5
+ver=6
 cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
     --cover-letter \
     --thread \
     -v "$ver" \
-    --to linux-mm@kvack.org \
+    --to 'Andrew Morton <akpm@linux-foundation.org>' \
     --cc 'Hugh Dickins <hughd@google.com>' \
-    --cc 'Andrew Morton <akpm@linux-foundation.org>' \
     --cc 'Al Viro <viro@zeniv.linux.org.uk>' \
     --cc 'Matthew Wilcox <willy@infradead.org>' \
     --cc 'Amir Goldstein <amir73il@gmail.com>' \
     --cc 'Jeff Layton <jlayton@kernel.org>' \
     --cc 'Johannes Weiner <hannes@cmpxchg.org>' \
     --cc 'Tejun Heo <tj@kernel.org>' \
+    --cc linux-mm@kvack.org \
     --cc linux-fsdevel@vger.kernel.org \
     --cc linux-kernel@vger.kernel.org \
     --cc kernel-team@fb.com \
