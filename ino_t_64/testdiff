@@ -1,0 +1,13 @@
+diff --git mm/shmem.c mm/shmem.c
+index 21c934d74823..d32996e5f32b 100644
+--- mm/shmem.c
++++ mm/shmem.c
+@@ -3727,6 +3727,8 @@ static int shmem_fill_super(struct super_block *sb, struct fs_context *fc)
+ #else
+ 	sb->s_flags |= SB_NOUSER;
+ #endif
++	/* DEBUG */
++	sbinfo->next_ino = UINT_MAX - 32;
+ 	sbinfo->max_blocks = ctx->blocks;
+ 	sbinfo->free_inodes = sbinfo->max_inodes = ctx->inodes;
+ 	if (sb->s_flags & SB_KERNMOUNT) {
