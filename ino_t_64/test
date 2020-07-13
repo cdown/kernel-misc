@@ -1,0 +1,29 @@
+First apply debug patch to set to UINT_MAX - 32, then
+
+---
+
+TMPFS_INODE64=n
+
+- `findmnt /tmp --output OPTIONS` does not show inode*
+- `touch {1..1000} && stat 1 && stat 1000` should show wrap
+- dmesg should have a warning to use inode64
+- # REBOOT
+- mount -o remount,inode64 /tmp
+- `findmnt /tmp --output OPTIONS` shows inode64
+- `mount -o remount,inode32 /tmp` should work
+- mount -o remount,inode64 /tmp
+- `touch {1..1000} && stat 1 && stat 1000` should not wrap
+- dmesg should be clean
+- `mount -o remount,inode32 /tmp` should NOT work due to excess
+
+---
+
+TMPFS_INODE64=y
+
+- `findmnt /tmp --output OPTIONS` shows inode64
+- `touch {1..1000} && stat 1 && stat 1000` should not wrap
+- `mount -o remount,inode32 /tmp` should NOT work due to excess
+- # REBOOT
+- `mount -o remount,inode32 /tmp` should work
+- `touch {1..1000} && stat 1 && stat 1000` should show wrap
+- dmesg should have a warning to use inode64
