@@ -1,0 +1,12 @@
+#!/bin/bash -ex
+
+# Set up a new QEMU image with the Arch Linux ISO.
+# From there, you can `curl -Lo setup https://bit.ly/kerntest`
+
+iso=${1?need iso}
+disk_base=$HOME/qemu
+disk_name=$disk_base/ktst-$(date +%F).img
+
+mkdir -p "$disk_base"
+qemu-img create "$disk_name" 16G
+qemu-system-x86_64 -boot d -cdrom "$iso" -m 4G -hda "$disk_name"
