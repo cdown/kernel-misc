@@ -9,4 +9,4 @@ disk_name=$disk_base/ktst-$(date +%F).img
 
 mkdir -p "$disk_base"
 qemu-img create -f raw "$disk_name" 16G
-qemu-system-x86_64 -boot d -cpu host -cdrom "$iso" -m 4G -drive cache=none,format=raw,file="$disk_name"
+qemu-system-x86_64 -enable-kvm -boot d -cpu host -cdrom "$iso" -m 4G -drive format=raw,file="$disk_name"
