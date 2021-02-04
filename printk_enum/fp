@@ -1,9 +1,8 @@
 #!/bin/bash -e
 
-ver=1
+#ver=1
 
 git format-patch \
-    -v "$ver" \
     --to linux-kernel@vger.kernel.org \
     --cc 'Petr Mladek <pmladek@suse.com>' \
     --cc 'Sergey Senozhatsky <sergey.senozhatsky@gmail.com>' \
