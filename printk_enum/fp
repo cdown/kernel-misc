@@ -1,13 +1,16 @@
 #!/bin/bash -e
 
-#ver=1
+ver=2
 
 git format-patch \
+    -v "$ver" \
     --to linux-kernel@vger.kernel.org \
     --cc 'Petr Mladek <pmladek@suse.com>' \
     --cc 'Sergey Senozhatsky <sergey.senozhatsky@gmail.com>' \
     --cc 'John Ogness <john.ogness@linutronix.de>' \
     --cc 'Johannes Weiner <hannes@cmpxchg.org>' \
     --cc 'Andrew Morton <akpm@linux-foundation.org>' \
+    --cc 'Steven Rostedt <rostedt@goodmis.org>' \
+    --cc 'Greg Kroah-Hartman <gregkh@linuxfoundation.org>' \
     --cc 'kernel-team@fb.com' \
-    master..
+    HEAD^
