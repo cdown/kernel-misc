@@ -1,16 +1,99 @@
 #!/bin/bash -e
 
-ver=2
+ver=6
+cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
+    --cover-letter \
+    --thread \
     -v "$ver" \
     --to linux-kernel@vger.kernel.org \
     --cc 'Petr Mladek <pmladek@suse.com>' \
+    --cc 'Jessica Yu <jeyu@kernel.org>' \
     --cc 'Sergey Senozhatsky <sergey.senozhatsky@gmail.com>' \
     --cc 'John Ogness <john.ogness@linutronix.de>' \
-    --cc 'Johannes Weiner <hannes@cmpxchg.org>' \
-    --cc 'Andrew Morton <akpm@linux-foundation.org>' \
     --cc 'Steven Rostedt <rostedt@goodmis.org>' \
     --cc 'Greg Kroah-Hartman <gregkh@linuxfoundation.org>' \
-    --cc 'kernel-team@fb.com' \
-    HEAD^
+    --cc 'Johannes Weiner <hannes@cmpxchg.org>' \
+    --cc 'Kees Cook <keescook@chromium.org>' \
+    --cc 'Al Viro <viro@zeniv.linux.org.uk>' \
+    --cc 'Andy Shevchenko <andriy.shevchenko@linux.intel.com>' \
+    --cc 'Rasmus Villemoes <linux@rasmusvillemoes.dk>' \
+    --cc kernel-team@fb.com \
+    next-20210513..
+
+sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: Userspace format indexing support/' "$cov_file"
+
+cat << 'EOF' >> "$cov_file"
+Please see the changelog of patch "printk: Userspace format indexing
+support" for context.
+
+---
+
+v2:
+
+- Use seq_printf instead of step by step accumulation
+- Scope fptr closer to its use
+- Prevent seq_file from needing to alloc a new buffer
+- Always provide KERN_SOH + level, even if caller omitted it
+- Provide one file per module
+- Update changelog to show ease of parsing
+- Provide printk -> _printk for ARCH=um (thanks, LKP robot)
+- Move to debugfs (thanks, Steven)
+
+---
+
+v3:
+
+- Reduce locking during open by moving size lifetime to the inode
+- Don't explicitly check for debugfs errors (thanks, gregkh)
+
+---
+
+v4:
+
+- Fix a missed `extern int printk` fixup in ia64 (thanks, lkp)
+
+---
+
+v5:
+
+Thanks Petr for the extensive feedback.
+
+- Move all module handling from module notifier to module.[ch] directly
+- Change to readable output format
+  - Handled by new string_escape(ESCAPE_PRINTF)
+- Add file/line/function information
+- Mass rename everything to printk_index/CONFIG_PRINTK_INDEX/pi_*
+  - As a result, this version does away with the mutex/hashtable
+- Use seq_file iteration API instead of simple_open
+- Remove debugfs file first to avoid ENOENT
+- Tear down backing datastructure if debugfs file creation fails
+- Move code under ifdef guard to kernel/printk/index.c
+- Add pi_sec (formerly printk_fmt_sec) documentation
+- Handle coexisting LOG_CONT + level
+- Add header to debugfs output
+- ...and probably some other stuff I forgot. :-)
+
+---
+
+v6:
+
+- Rebase on next-20210513
+- Remove pi_sec, do on demand lookups instead
+- Lookup debugfs file on demand
+- pi_sec_{store,remove} now only changes debugfs, so renamed
+- Don't check for debugfs failure (again)
+- Extract lookup logic into pi_get_entry
+- Make the stored struct `const __used`
+- Use _p_func directly, which allows including void-returning functions
+- Move more stuff outside PRINTK_INDEX #ifdef using __printk_index_emit
+- Scope __{start,stop}_printk_index more tightly
+- Move parse_prefix to printk_parse_prefix in internal.h
+- Put PRINTK_INDEX definition below TRACEDATA
+- Use a module notifier again
+- pi_object -> pi_entry, with clearer vars
+- Reword Kconfig
+- Split out seq_file/printk_info_flags/string_helpers stuff into patches
+- Add dev_printk indexing support
+EOF
