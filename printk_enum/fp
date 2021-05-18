@@ -19,7 +19,7 @@ git format-patch \
     --cc 'Andy Shevchenko <andriy.shevchenko@linux.intel.com>' \
     --cc 'Rasmus Villemoes <linux@rasmusvillemoes.dk>' \
     --cc kernel-team@fb.com \
-    next-20210513..
+    "$(git rev-parse next-20210518)"..
 
 sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: Userspace format indexing support/' "$cov_file"
 
@@ -78,7 +78,7 @@ Thanks Petr for the extensive feedback.
 
 v6:
 
-- Rebase on next-20210513
+- Rebase on next-20210518
 - Remove pi_sec, do on demand lookups instead
 - Lookup debugfs file on demand
 - pi_sec_{store,remove} now only changes debugfs, so renamed
