@@ -16,7 +16,6 @@ git format-patch \
     --cc 'Greg Kroah-Hartman <gregkh@linuxfoundation.org>' \
     --cc 'Johannes Weiner <hannes@cmpxchg.org>' \
     --cc 'Kees Cook <keescook@chromium.org>' \
-    --cc 'Al Viro <viro@zeniv.linux.org.uk>' \
     --cc 'Andy Shevchenko <andriy.shevchenko@linux.intel.com>' \
     --cc 'Rasmus Villemoes <linux@rasmusvillemoes.dk>' \
     --cc kernel-team@fb.com \
@@ -94,6 +93,7 @@ v6:
 - Use a module notifier again
 - pi_object -> pi_entry, with clearer vars
 - Reword Kconfig
-- Split out seq_file/printk_info_flags/string_helpers stuff into patches
+- Split out printk_info_flags/string_helpers stuff into patches
+- Use seq_escape_str directly now that ESCAPE_APPEND exists
 - Add dev_printk indexing support
 EOF
