@@ -202,4 +202,5 @@ v7:
 - Move printk_parse_prefix into internal.h instead of printk_ringbuffer.h
 - Now that level might be optional (eg. in LOG_CONT with no level case), update
   the header to match
+- Reduce duplication in dev_printk
 EOF
