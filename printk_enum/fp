@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-ver=6
+ver=7
 cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
@@ -19,7 +19,7 @@ git format-patch \
     --cc 'Andy Shevchenko <andriy.shevchenko@linux.intel.com>' \
     --cc 'Rasmus Villemoes <linux@rasmusvillemoes.dk>' \
     --cc kernel-team@fb.com \
-    "$(git rev-parse next-20210518)"..
+    "$(git rev-parse next-20210615)"..
 
 sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: Userspace format indexing support/' "$cov_file"
 
@@ -176,4 +176,30 @@ v6:
 - Split out printk_info_flags/string_helpers stuff into patches
 - Use seq_escape_str directly now that ESCAPE_APPEND exists
 - Add dev_printk indexing support
+
+---
+
+v7:
+
+- Rebase on next-20210615
+- Change some GCC statement expressions where do {} while (0) could work
+   - dev_* needs to be statement due to SCSI_LOG_ERROR_RECOVERY and similar
+- Fix some weird continuation indentation
+- Remove filename from index.c header
+- Add explicit default case for non MODULE_STATE_COMING/MODULE_STATE_GOING
+- Tersify !CONFIG_MODULES case for pi_setup_module_notifier
+- Remove now unnecessary pi_start forward declaration
+- Move to DEFINE_SEQ_ATTRIBUTE for dfs_index
+- Add comment explaining why we have both ESCAPE_SPECIAL and subset as @only
+- Remove post_fmt for now, since dev_printk doesn't have it and it looks rare
+- Rename pre_fmt to subsys_fmt_prefix
+- Avoid forward declarations for pi_{create,remove}_file by splitting
+  pi_get_module_name from other CONFIG_MODULES dependents
+- Don't show -1 for LOGLEVEL_DEFAULT with LOG_CONT, since it has a different
+  semantic meaning
+- Some improvements to comments based on feedback from Petr
+- Split out printk_parse_prefix externalisation into a separate patch
+- Move printk_parse_prefix into internal.h instead of printk_ringbuffer.h
+- Now that level might be optional (eg. in LOG_CONT with no level case), update
+  the header to match
 EOF
