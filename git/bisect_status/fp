@@ -1,29 +1,48 @@
 #!/bin/bash -e
 
-ver=2
+ver=3
 cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
     --cover-letter \
     --thread \
     -v "$ver" \
-    --to git@vger.kernel.org
+    --to git@vger.kernel.org \
     --cc 'Junio C Hamano <gitster@pobox.com>' \
     --cc 'Johannes Schindelin <johannes.schindelin@gmx.de>' \
     --cc 'Christian Couder <chriscool@tuxfamily.org>' \
+    --cc 'Taylor Blau <me@ttaylorr.com>' \
     --cc kernel-team@fb.com \
     "$(git rev-parse origin/master)"..
 
 sed -i 's/\*\*\* SUBJECT HERE \*\*\*/bisect: status improvements when bisect is not fully fleshed out/' "$cov_file"
 
 cat << 'EOF' >> "$cov_file"
-When bisecting, we currently don't output anything before bisection starts in
-earnest, which can result in some confusion. For example, in the case
-illustrated in the first commit in this patch series, it's trivial to
-accidentally misspell a tag or branch and accidentally end up in an unintended
-state with no clear indication about what happened.
+When bisecting, we currently don't output anything before bisection
+starts in earnest, which can result in some confusion. For example, in
+the case illustrated in the first commit in this patch series, it's
+trivial to accidentally misspell a tag or branch and accidentally end up
+in an unintended state with no clear indication about what happened.
 
-This patch series makes it so that we give information about bisect state even
-before the bisect is ready to begin, and also stores those changes in state to
-the bisect log.
+This patch series makes it so that we give information about bisect
+state even before the bisect is ready to begin. We also store these
+changes in state to the bisect log.
+
+v2:
+
+- Move to improve bisect output overall, instead of just warning for the
+  specific unintended pathspec case.
+
+v3:
+
+- Fix test indentation
+- Rename bs to state
+- Use `unsigned int' for nr_{good,bad}
+- Pass the bisect state struct as an argument into bisect_print_status
+- Zero-initialise bisect_state directly, don't use memset()
+- Fix multiline comment style in bisect.h
+- Use strbuf in bisect_log_printf
+- Change `git bisect log' use an output file in tests instead of piping
 EOF
+
+# vim: set tw=72:
