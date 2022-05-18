@@ -1,0 +1,69 @@
+#!/bin/bash -ex
+
+set_force() { echo "$1" > /proc/sys/kernel/force_console_loglevel; }
+set_default() { echo "$1" > /proc/sys/kernel/default_console_loglevel; }
+set_minimum() { echo "$1" > /proc/sys/kernel/minimum_console_loglevel; }
+set_local() { echo "$1" > /sys/class/console/ttyS/loglevel; }
+
+check_effective() { [[ "$(cat /sys/class/console/ttyS/effective_loglevel)" == "$1" ]]; }
+check_effective_source() { [[ "$(cat /sys/class/console/ttyS/effective_loglevel_source)" == "$1" ]]; }
+
+# All controls are 0 or unset
+reset() {
+    set_force unset
+    set_default 0
+    set_minimum 0
+    set_local unset
+    check_effective 0
+    check_effective_source global
+}
+
+# Only default loglevel is set, minimum is 0. Should take default.
+reset
+
+# If default gets moved, we take it
+set_default 7
+check_effective 7
+check_effective_source global
+
+# If we start forcing, use that
+set_force 5
+check_effective 5
+check_effective_source forced
+
+# ...and it doesn't care about local loglevel.
+set_local 2
+
+# If the minimum loglevel mandates higher, it's forced_minimum
+set_minimum 6
+check_effective 6
+check_effective_source forced_minimum
+
+# If the force then goes away, we're back to just minimum and we're above it
+set_local unset
+set_force unset
+check_effective 7
+check_effective_source global
+
+# But if local comes back, we might enforce it again
+set_local 2
+check_effective 6
+check_effective_source minimum
+
+# Raising it puts it to minimum even without local
+set_local unset
+set_minimum 8
+check_effective 8
+check_effective_source minimum
+
+# Minimum is respected for per-console
+reset
+set_minimum 5
+set_local 4
+check_effective 5
+check_effective_source minimum
+
+# And if it goes away, we use local
+set_minimum 4
+check_effective 4
+check_effective_source local
