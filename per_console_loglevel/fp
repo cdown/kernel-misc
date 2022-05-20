@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+git format-patch \
+    --rfc \
+    --v2 \
+    --base printk/master \
+    --to linux-kernel@vger.kernel.org \
+    --cc 'Petr Mladek <pmladek@suse.com>' \
+    --cc 'Greg Kroah-Hartman <gregkh@linuxfoundation.org>' \
+    --cc 'Sergey Senozhatsky <senozhatsky@chromium.org>' \
+    --cc 'Steven Rostedt <rostedt@goodmis.org>' \
+    --cc 'John Ogness <john.ogness@linutronix.de>' \
+    --cc 'Geert Uytterhoeven <geert@linux-m68k.org>' \
+    --cc kernel-team@fb.com \
+    "$(git rev-parse printk/master)"..
+
+# vim: set tw=72:
