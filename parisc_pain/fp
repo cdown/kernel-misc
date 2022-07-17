@@ -1,0 +1,14 @@
+#!/bin/bash -e
+
+git format-patch \
+    --base printk/master \
+    --to linux-kernel@vger.kernel.org \
+    --cc 'Petr Mladek <pmladek@suse.com>' \
+    --cc '"James E.J. Bottomley" <James.Bottomley@HansenPartnership.com>' \
+    --cc 'Helge Deller <deller@gmx.de>' \
+    --cc 'Kees Cook <keescook@chromium.org>' \
+    --cc linux-parisc@vger.kernel.org \
+    --cc kernel-team@fb.com \
+    "$(git rev-parse printk/master)"..
+
+# vim: set tw=72:
