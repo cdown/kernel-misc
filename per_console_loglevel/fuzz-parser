@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -ex
+
+export AFL_SKIP_CPUFREQ=1
+
+sudo sh -c 'echo core > /proc/sys/kernel/core_pattern'
+
+afl-gcc loglevel.c -Wall -Werror -Wextra -Wno-unused-parameter -Og -fno-omit-frame-pointer -ggdb -o loglevel
+afl-fuzz -i fuzz-in -o fuzz-out -f afl ./loglevel
