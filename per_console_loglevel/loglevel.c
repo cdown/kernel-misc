@@ -6,29 +6,20 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-struct console {
+#define clamp(a, b, c) (a)
+#define CON_LOGLEVEL 128
+
+struct console_cmdline {
 	char *options;
 	int level;
+	short flags;
 };
 
-static void _parse_named_options(struct console *con, const char *key,
-				 const char *value)
-{
-	if (strcmp(key, "loglevel") == 0) {
-		if (value && isdigit(value[0]) && strlen(value) == 1) {
-			/* TODO: clamping + flags */
-			con->level = value[0] - '0';
-			return;
-		}
-	}
-
-	printf("ignoring invalid console option: '%s%s%s'\n", key,
-	       value ? ":" : "", value ?: "");
-}
-
-static int parse_named_options(struct console *con, char *options)
+static int parse_console_cmdline_options(struct console_cmdline *c,
+					 char *options)
 {
 	char *item;
+	bool seen_serial_opts = false;
 
 	while ((item = strsep(&options, ",")) != NULL) {
 		char *key = item, *value;
@@ -37,7 +28,22 @@ static int parse_named_options(struct console *con, char *options)
 		if (value)
 			*(value++) = '\0';
 
-		_parse_named_options(con, key, value);
+		if (strcmp(key, "loglevel") == 0 && value &&
+		    isdigit(value[0]) && strlen(value) == 1) {
+			c->level = clamp(value[0] - '0', LOGLEVEL_EMERG,
+					 LOGLEVEL_DEBUG + 1);
+			c->flags |= CON_LOGLEVEL;
+			continue;
+		}
+
+		if (!seen_serial_opts && isdigit(key[0]) && !value) {
+			seen_serial_opts = true;
+			c->options = key;
+			continue;
+		}
+
+		printf("ignoring invalid console option: '%s%s%s'\n", key,
+		       value ? ":" : "", value ?: "");
 	}
 
 	return 0;
@@ -45,7 +51,7 @@ static int parse_named_options(struct console *con, char *options)
 
 int main(int argc, char *argv[])
 {
-	struct console con = { 0 };
+	struct console_cmdline con = { 0 };
 	FILE *fp;
 	long size;
 	char *buffer;
@@ -74,8 +80,9 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	parse_named_options(&con, buffer);
-	printf("%d\n", con.level);
+	parse_console_cmdline_options(&con, buffer);
+	printf("options: %s\n", con.options);
+	printf("level: %d\n", con.level);
 
 	fclose(fp);
 	free(buffer);
