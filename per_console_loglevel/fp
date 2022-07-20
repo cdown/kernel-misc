@@ -1,8 +1,12 @@
 #!/bin/bash -e
 
+ver=3
+cov_file="v${ver}-0000-cover-letter.patch"
+
 git format-patch \
-    --rfc \
-    --v2 \
+    --cover-letter \
+    --thread \
+    -v"$ver" \
     --base printk/master \
     --to linux-kernel@vger.kernel.org \
     --cc 'Petr Mladek <pmladek@suse.com>' \
@@ -13,5 +17,36 @@ git format-patch \
     --cc 'Geert Uytterhoeven <geert@linux-m68k.org>' \
     --cc kernel-team@fb.com \
     "$(git rev-parse printk/master)"..
+
+sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: console: Per-console loglevels/' "$cov_file"
+
+cat << 'EOF' >> "$cov_file"
+
+v3:
+
+- Update to work with John's kthread patches
+- Remove force_console_loglevel, now we only have global and local levels
+- Remove minimum_console_loglevel control and document how to change it
+- The minimum loglevel is now only honoured on setting global/local level
+- Add ignore_per_console_loglevel
+- Return -EINVAL if trying to set below minimum console level
+- Add parser for named console= options
+- Fix docs around ignore_loglevel: it can be changed at runtime
+- Fix ordering in "in order of authority" docs
+- Remove duplicated default_console_loglevel doc
+- Only warn once on syslog() use
+
+v2:
+
+- Dynamically allocate struct device*
+- Document sysfs attributes in Documentation/ABI/
+- Use sysfs_emit() instead of sprintf() in dev sysfs files
+- Remove WARN_ON() for device_add/IS_ERR(console_class)
+- Remove "soon" comment for kernel.printk
+- Fix !CONFIG_PRINTK build
+- Fix device_unregister() NULL dereference if called before class setup
+- Add new documentation to MAINTAINERS
+
+EOF
 
 # vim: set tw=72:
