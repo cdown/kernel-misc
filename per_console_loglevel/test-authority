@@ -3,6 +3,7 @@
 set_global() { echo "$1" > /proc/sys/kernel/console_loglevel; }
 set_printk() { echo "$1" > /proc/sys/kernel/printk; }
 set_local() { echo "$1" > /sys/class/console/ttyS/loglevel; }
+set_sysrq() { echo "$1" > /proc/sysrq-trigger; }
 
 check_effective() { [[ "$(cat /sys/class/console/ttyS/effective_loglevel)" == "$1" ]]; }
 check_effective_source() { [[ "$(cat /sys/class/console/ttyS/effective_loglevel_source)" == "$1" ]]; }
@@ -49,4 +50,11 @@ check_effective_source local
 # Can unset. minimum is completely ignored if 0 was already there
 set_local unset
 check_effective 0
+check_effective_source global
+
+# Magic sysrq should reset everything, including local
+set_printk '0 0 0 0'  # no minimum
+set_local 5
+set_sysrq 8
+check_effective 8
 check_effective_source global
