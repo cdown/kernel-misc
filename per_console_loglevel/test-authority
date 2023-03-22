@@ -2,17 +2,17 @@
 
 set_global() { echo "$1" > /proc/sys/kernel/console_loglevel; }
 set_printk() { echo "$1" > /proc/sys/kernel/printk; }
-set_local() { echo "$1" > /sys/class/console/ttyS/loglevel; }
+set_local() { echo "$1" > /sys/class/console/ttyS0/loglevel; }
 set_sysrq() { echo "$1" > /proc/sysrq-trigger; }
 
-check_effective() { [[ "$(cat /sys/class/console/ttyS/effective_loglevel)" == "$1" ]]; }
-check_effective_source() { [[ "$(cat /sys/class/console/ttyS/effective_loglevel_source)" == "$1" ]]; }
+check_effective() { [[ "$(cat /sys/class/console/ttyS0/effective_loglevel)" == "$1" ]]; }
+check_effective_source() { [[ "$(cat /sys/class/console/ttyS0/effective_loglevel_source)" == "$1" ]]; }
 
 # All controls are 0 or unset
 reset() {
     set_printk '0 0 0 0'
     set_global 0
-    set_local unset
+    set_local -1
     check_effective 0
     check_effective_source global
 }
@@ -48,7 +48,7 @@ check_effective 5
 check_effective_source local
 
 # Can unset. minimum is completely ignored if 0 was already there
-set_local unset
+set_local -1
 check_effective 0
 check_effective_source global
 
