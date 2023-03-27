@@ -1,13 +1,13 @@
 #!/bin/bash -e
 
-ver=3
+ver=4
 cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
     --cover-letter \
     --thread \
     -v"$ver" \
-    --base printk/master \
+    --base linus/master \
     --to linux-kernel@vger.kernel.org \
     --cc 'Petr Mladek <pmladek@suse.com>' \
     --cc 'Greg Kroah-Hartman <gregkh@linuxfoundation.org>' \
@@ -16,11 +16,28 @@ git format-patch \
     --cc 'John Ogness <john.ogness@linutronix.de>' \
     --cc 'Geert Uytterhoeven <geert@linux-m68k.org>' \
     --cc kernel-team@fb.com \
-    "$(git rev-parse printk/master)"..
+    "$(git rev-parse linus/master)"..
 
 sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: console: Per-console loglevels/' "$cov_file"
 
 cat << 'EOF' >> "$cov_file"
+
+v4:
+
+- Rebase on current Linus' master
+- Use SRCU iterators for console walks
+- Override per-console loglevels on magic sysrq
+- Fix htmldocs
+- Fix mistaken __user annotation in sysctl callbacks
+- Consistently use indexed names (eg. ttyS0 instead of ttyS)
+- Remove "The loglevel for a console can be set in many places" comment
+- Remove CON_LOGLEVEL flag and infer based on >0
+- Open code our dev_get_drvdata console stashing
+- Split out console_effective_loglevel functions per Petr's suggestion
+- Make boot_delay_msec/printk_delay check if it would be emitted
+- Simplify warning on SYSLOG_ACTION_CONSOLE_LEVEL
+- Save/restore ignore_per_console_loglevel on SYSLOG_ACTION_CONSOLE_{ON,OFF}
+- Unify min/max level checks across sysfs/proc/syslog
 
 v3:
 
