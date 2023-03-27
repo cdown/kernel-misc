@@ -4,7 +4,9 @@ set_global() { echo "$1" > /proc/sys/kernel/console_loglevel; }
 set_printk() { echo "$1" > /proc/sys/kernel/printk; }
 set_local() { echo "$1" > /sys/class/console/ttyS0/loglevel; }
 set_sysrq() { echo "$1" > /proc/sysrq-trigger; }
-set_syslog() { dmesg -n "$1"; }
+set_syslog_level() { dmesg -n "$1"; }
+set_syslog_con_on() { dmesg --console-on; }
+set_syslog_con_off() { dmesg --console-off; }
 set_ignore_loglevel() { echo "$1" > /sys/module/printk/parameters/ignore_loglevel; }
 set_ignore_per_console_loglevel() { echo "$1" > /sys/module/printk/parameters/ignore_per_console_loglevel; }
 
@@ -74,18 +76,41 @@ check_effective_source global
 
 # syslog() should be ignored by consoles with a local loglevel set
 set_local 5
-set_syslog 6
+set_syslog_level 6
 check_effective 5
 check_effective_source local
 
 # ...but should be respected otherwise.
 set_local -1
-set_syslog 3
+set_syslog_level 3
 check_effective 3
 check_effective_source global
 
+# When we turn off consoles, we should save the previous
+# ignore_per_console_loglevel state.
+reset
+set_global 7
+set_local 5
+set_ignore_per_console_loglevel 1
+set_syslog_con_off
+check_effective 0  # the minimum console loglevel
+check_effective_source global
+set_syslog_con_on
+check_effective 7  # the previous global loglevel, since we were ignoring
+check_effective_source global
+
+set_ignore_per_console_loglevel 0
+set_syslog_con_off
+check_effective 0  # the minimum console loglevel
+check_effective_source global
+set_syslog_con_on
+check_effective 5  # the previous local loglevel, since we were not ignoring
+check_effective_source local
+
 # If ignore_loglevel comes into the picture, we should just set to
 # CONSOLE_LOGLEVEL_MOTORMOUTH.
+reset
+set_local 5
 set_ignore_loglevel 1
 check_effective 15
 check_effective_source ignore_loglevel
