@@ -65,7 +65,7 @@ static bool find_and_remove_console_option(char *buf, size_t size,
 
 	if (found) {
 		if (opt)
-			memmove(item, opt, strlen(opt) + 1);
+			memcpy(item, opt, strlen(opt) + 1);
 		else if (first)
 			*item = '\0';
 		else
