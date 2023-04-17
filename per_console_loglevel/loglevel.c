@@ -68,12 +68,14 @@ static bool find_and_remove_console_option(char *buf, size_t size, char *wanted,
 	return found;
 }
 
-void check_result(char *cmdline, char *key, bool should_find,
+void check_result(char *cmdline_in, char *key, bool should_find,
 		  char *expected_val, char *expected_cmdline)
 {
 	char val[16];
+	char cmdline[128];
 	bool found;
 
+	strcpy(cmdline, cmdline_in);
 	printf("Looking for key %s in cmdline '%s'\n", key, cmdline);
 	found = find_and_remove_console_option(val, sizeof(val), key, cmdline);
 	printf("Found: %d\n", found);
@@ -137,6 +139,11 @@ int main(int argc, char *argv[])
 		print_result(cmdline, "loglevel");
 	} else {
 		check_result("", "foo", false, "", "");
+		check_result("bar", "foo", false, "", "bar");
+		check_result("bar,baz", "foo", false, "", "bar,baz");
+		check_result("foo", "foo", true, "", "");
+		check_result("foo:bar", "foo", true, "bar", "");
+		check_result("bar,foo:bar,baz", "foo", true, "bar", "bar,baz");
 	}
 
 	if (fp) {
