@@ -52,38 +52,44 @@ static int parse_console_cmdline_options(struct console_cmdline *c,
 int main(int argc, char *argv[])
 {
 	struct console_cmdline con = { 0 };
-	FILE *fp;
+	FILE *fp = NULL;
 	long size;
-	char *buffer;
+	char *cmdline;
 
-	fp = fopen("afl", "rb");
-	if (!fp) {
-		perror("afl");
-		exit(1);
+	if (argc == 2)
+		cmdline = argv[1];
+	else {
+		fp = fopen("afl", "rb");
+		if (!fp) {
+			perror("afl");
+			exit(1);
+		}
+
+		fseek(fp, 0L, SEEK_END);
+		size = ftell(fp);
+		rewind(fp);
+
+		cmdline = calloc(1, size + 1);
+		if (!cmdline) {
+			fclose(fp);
+			perror("calloc");
+			exit(1);
+		}
+
+		if (fread(cmdline, size, 1, fp) != 1) {
+			fclose(fp);
+			free(cmdline);
+			perror("fread");
+			exit(1);
+		}
 	}
 
-	fseek(fp, 0L, SEEK_END);
-	size = ftell(fp);
-	rewind(fp);
-
-	buffer = calloc(1, size + 1);
-	if (!buffer) {
-		fclose(fp);
-		perror("calloc");
-		exit(1);
-	}
-
-	if (fread(buffer, size, 1, fp) != 1) {
-		fclose(fp);
-		free(buffer);
-		perror("fread");
-		exit(1);
-	}
-
-	parse_console_cmdline_options(&con, buffer);
+	parse_console_cmdline_options(&con, cmdline);
 	printf("options: %s\n", con.options);
 	printf("level: %d\n", con.level);
 
-	fclose(fp);
-	free(buffer);
+	if (fp) {
+		fclose(fp);
+		free(cmdline);
+	}
 }
