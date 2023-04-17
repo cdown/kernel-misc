@@ -15,15 +15,11 @@ struct console_cmdline {
 	short flags;
 };
 
-struct console_option {
-	char *key;
-	char *value;
-};
+#define strscpy strncpy
 
-static struct console_option find_and_remove_console_option(char *wanted,
-							    char *options)
+static bool find_and_remove_console_option(char *buf, size_t size, char *wanted,
+					   char *options)
 {
-	struct console_option ret = { NULL, NULL };
 	bool found = false, first = true;
 	char *item, *opt = options;
 
@@ -36,17 +32,18 @@ static struct console_option find_and_remove_console_option(char *wanted,
 
 		if (strcmp(key, wanted) == 0) {
 			found = true;
-			ret.key = strdup(key);
 			if (value)
-				ret.value = strdup(value);
+				strscpy(buf, value, size);
+			else
+				*buf = '\0';
 		}
 
-		if (opt)
+		if (!found && opt)
 			*(opt - 1) = ',';
+		if (!found && value)
+			*(value - 1) = ':';
 		if (!first)
 			*(item - 1) = ',';
-		if (value)
-			*(value - 1) = ':';
 
 		if (found)
 			break;
@@ -63,7 +60,7 @@ static struct console_option find_and_remove_console_option(char *wanted,
 			*--item = '\0';
 	}
 
-	return ret;
+	return found;
 }
 
 int main(int argc, char *argv[])
@@ -72,7 +69,8 @@ int main(int argc, char *argv[])
 	FILE *fp = NULL;
 	long size;
 	char *cmdline;
-	struct console_option level = { NULL, NULL };
+	char level[16];
+	bool found;
 
 	if (argc == 2)
 		cmdline = argv[1];
@@ -102,18 +100,17 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	printf("cmdline: %s\n", cmdline);
 	printf("After removing loglevel:\n");
-	level = find_and_remove_console_option("loglevel", cmdline);
+	found = find_and_remove_console_option(level, sizeof(level), "loglevel",
+					       cmdline);
 	con.options = cmdline;
 	printf("options passed to driver: %s\n", con.options);
 	printf("command line options: %s\n", cmdline);
-	if (level.key)
-		printf("level: key: %s, value: %s\n", level.key, level.value);
-
-	if (level.key)
-		free(level.key);
-	if (level.value)
-		free(level.value);
+	if (found)
+		printf("level: %s\n", level);
+	else
+		printf("level not found");
 
 	if (fp) {
 		fclose(fp);
