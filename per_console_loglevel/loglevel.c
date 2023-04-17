@@ -1,9 +1,10 @@
 /*
  * afl-gcc loglevel.c -fno-omit-frame-pointer -Og -ggdb -o loglevel
- * afl-fuzz -i fuzz-in -o fuzz-out -f afl ./loglevel
+ * afl-fuzz -i fuzz-in -o fuzz-out -f afl ./loglevel afl
  */
 #define _DEFAULT_SOURCE
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -67,54 +68,76 @@ static bool find_and_remove_console_option(char *buf, size_t size, char *wanted,
 	return found;
 }
 
+void check_result(char *cmdline, char *key, bool should_find,
+		  char *expected_val, char *expected_cmdline)
+{
+	char val[16];
+	bool found;
+
+	printf("Looking for key %s in cmdline '%s'\n", key, cmdline);
+	found = find_and_remove_console_option(val, sizeof(val), key, cmdline);
+	printf("Found: %d\n", found);
+	assert(found == should_find);
+	if (found) {
+		printf("Value: %s\n", val);
+		assert(strcmp(val, expected_val) == 0);
+	}
+	printf("Mutated cmdline: %s\n", cmdline);
+	assert(strcmp(cmdline, expected_cmdline) == 0);
+}
+
+void print_result(char *cmdline, char *key)
+{
+	char val[16];
+	bool found;
+
+	printf("Looking for key %s in cmdline '%s'\n", key, cmdline);
+	found = find_and_remove_console_option(val, sizeof(val), key, cmdline);
+	printf("Found: %d\n", found);
+	if (found) {
+		printf("Value: %s\n", val);
+	}
+	printf("Mutated cmdline: %s\n", cmdline);
+}
+
 int main(int argc, char *argv[])
 {
-	struct console_cmdline con = { 0 };
 	FILE *fp = NULL;
 	long size;
 	char *cmdline;
-	char level[16];
-	bool found;
 
-	if (argc == 2)
-		cmdline = argv[1];
-	else {
-		fp = fopen("afl", "rb");
-		if (!fp) {
-			perror("afl");
-			exit(1);
+	if (argc == 2) {
+		if (strcmp(argv[1], "afl") == 0) {
+			fp = fopen("afl", "rb");
+			if (!fp) {
+				perror("afl");
+				exit(1);
+			}
+
+			fseek(fp, 0L, SEEK_END);
+			size = ftell(fp);
+			rewind(fp);
+
+			cmdline = calloc(1, size + 1);
+			if (!cmdline) {
+				fclose(fp);
+				perror("calloc");
+				exit(1);
+			}
+
+			if (fread(cmdline, size, 1, fp) != 1) {
+				fclose(fp);
+				free(cmdline);
+				perror("fread");
+				exit(1);
+			}
+		} else {
+			cmdline = argv[1];
 		}
-
-		fseek(fp, 0L, SEEK_END);
-		size = ftell(fp);
-		rewind(fp);
-
-		cmdline = calloc(1, size + 1);
-		if (!cmdline) {
-			fclose(fp);
-			perror("calloc");
-			exit(1);
-		}
-
-		if (fread(cmdline, size, 1, fp) != 1) {
-			fclose(fp);
-			free(cmdline);
-			perror("fread");
-			exit(1);
-		}
+		print_result(cmdline, "loglevel");
+	} else {
+		check_result("", "foo", false, "", "");
 	}
-
-	printf("cmdline: %s\n", cmdline);
-	printf("After removing loglevel:\n");
-	found = find_and_remove_console_option(level, sizeof(level), "loglevel",
-					       cmdline);
-	con.options = cmdline;
-	printf("options passed to driver: %s\n", con.options);
-	printf("command line options: %s\n", cmdline);
-	if (found)
-		printf("level: %s\n", level);
-	else
-		printf("level not found");
 
 	if (fp) {
 		fclose(fp);
