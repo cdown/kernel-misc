@@ -1,3 +1,7 @@
+/*
+ * afl-gcc loglevel.c -fno-omit-frame-pointer -Og -ggdb -o loglevel
+ * afl-fuzz -i fuzz-in -o fuzz-out -f afl ./loglevel
+ */
 #define _DEFAULT_SOURCE
 
 #include <stdio.h>
