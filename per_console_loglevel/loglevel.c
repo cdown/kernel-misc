@@ -22,13 +22,13 @@ struct console_cmdline {
 
 #define strscpy strncpy
 
-static bool find_and_remove_console_option(char *buf, size_t size, char *wanted,
-					   char *options)
+static bool find_and_remove_console_option(char *buf, size_t size,
+					   const char *wanted, char *options)
 {
 	bool found = false, first = true;
 	char *item, *opt = options;
 
-	while ((item = strsep(&opt, ",")) != NULL) {
+	while ((item = strsep(&opt, ","))) {
 		char *key = item, *value;
 
 		value = strchr(item, ':');
