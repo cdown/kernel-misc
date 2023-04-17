@@ -21,6 +21,7 @@ struct console_cmdline {
 };
 
 #define strscpy strncpy
+#define pr_warn printf
 
 static bool find_and_remove_console_option(char *buf, size_t size,
 					   const char *wanted, char *options)
@@ -37,9 +38,15 @@ static bool find_and_remove_console_option(char *buf, size_t size,
 
 		if (strcmp(key, wanted) == 0) {
 			found = true;
-			if (value)
-				strscpy(buf, value, size);
-			else
+			if (value) {
+				if (strlen(value) > size - 1) {
+					pr_warn("Can't copy console option value for %s:%s: not enough space (%zu)\n",
+						key, value, size);
+					found = false;
+				} else {
+					strscpy(buf, value, size);
+				}
+			} else
 				*buf = '\0';
 		}
 
@@ -144,6 +151,11 @@ int main(int argc, char *argv[])
 		check_result("foo", "foo", true, "", "");
 		check_result("foo:bar", "foo", true, "bar", "");
 		check_result("bar,foo:bar,baz", "foo", true, "bar", "bar,baz");
+		// val is too large
+		check_result(
+			"bar,foo:barrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr,baz",
+			"foo", false, "",
+			"bar,foo:barrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr,baz");
 	}
 
 	if (fp) {
