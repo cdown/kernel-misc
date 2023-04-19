@@ -50,13 +50,14 @@ static bool find_and_remove_console_option(char *options, const char *key,
 				*val_buf = '\0';
 		}
 
-		if (!found && next)
-			*(next - 1) = ',';
-		if (!found && value)
-			*(value - 1) = ':';
-
 		if (found)
 			break;
+		else {
+			if (next)
+				*(next - 1) = ',';
+			if (value)
+				*(value - 1) = ':';
+		}
 
 		first = false;
 	}
