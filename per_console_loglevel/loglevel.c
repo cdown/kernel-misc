@@ -23,39 +23,37 @@ struct console_cmdline {
 #define strscpy strncpy
 #define pr_warn printf
 
-static bool find_and_remove_console_option(char *buf, size_t size,
-					   const char *wanted, char *options)
+static bool find_and_remove_console_option(char *options, const char *key,
+					   char *val_buf, size_t val_buf_size)
 {
 	bool found = false, first = true;
-	char *item, *opt = options;
+	char *option, *next = options;
 
-	while ((item = strsep(&opt, ","))) {
-		char *key = item, *value;
+	while ((option = strsep(&next, ","))) {
+		char *value;
 
-		value = strchr(item, ':');
+		value = strchr(option, ':');
 		if (value)
 			*(value++) = '\0';
 
-		if (strcmp(key, wanted) == 0) {
+		if (strcmp(option, key) == 0) {
 			found = true;
 			if (value) {
-				if (strlen(value) > size - 1) {
+				if (strlen(value) > val_buf_size - 1) {
 					pr_warn("Can't copy console option value for %s:%s: not enough space (%zu)\n",
-						key, value, size);
+						option, value, val_buf_size);
 					found = false;
 				} else {
-					strscpy(buf, value, size);
+					strscpy(val_buf, value, val_buf_size);
 				}
 			} else
-				*buf = '\0';
+				*val_buf = '\0';
 		}
 
-		if (!found && opt)
-			*(opt - 1) = ',';
+		if (!found && next)
+			*(next - 1) = ',';
 		if (!found && value)
 			*(value - 1) = ':';
-		if (!first)
-			*(item - 1) = ',';
 
 		if (found)
 			break;
@@ -64,12 +62,12 @@ static bool find_and_remove_console_option(char *buf, size_t size,
 	}
 
 	if (found) {
-		if (opt)
-			memcpy(item, opt, strlen(opt) + 1);
+		if (next)
+			memmove(option, next, strlen(next) + 1);
 		else if (first)
-			*item = '\0';
+			*option = '\0';
 		else
-			*--item = '\0';
+			*--option = '\0';
 	}
 
 	return found;
@@ -84,7 +82,7 @@ void check_result(char *cmdline_in, char *key, bool should_find,
 
 	strcpy(cmdline, cmdline_in);
 	printf("Looking for key %s in cmdline '%s'\n", key, cmdline);
-	found = find_and_remove_console_option(val, sizeof(val), key, cmdline);
+	found = find_and_remove_console_option(cmdline, key, val, sizeof(val));
 	printf("Found: %d\n", found);
 	assert(found == should_find);
 	if (found) {
@@ -101,7 +99,7 @@ void print_result(char *cmdline, char *key)
 	bool found;
 
 	printf("Looking for key %s in cmdline '%s'\n", key, cmdline);
-	found = find_and_remove_console_option(val, sizeof(val), key, cmdline);
+	found = find_and_remove_console_option(cmdline, key, val, sizeof(val));
 	printf("Found: %d\n", found);
 	if (found) {
 		printf("Value: %s\n", val);
