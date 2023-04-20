@@ -24,7 +24,7 @@ cat << 'EOF' >> "$cov_file"
 
 v4:
 
-- Rebase on current Linus' master
+- Change base to Linus' master
 - Use SRCU iterators for console walks
 - Override per-console loglevels on magic sysrq
 - Fix htmldocs
@@ -38,6 +38,7 @@ v4:
 - Simplify warning on SYSLOG_ACTION_CONSOLE_LEVEL
 - Save/restore ignore_per_console_loglevel on SYSLOG_ACTION_CONSOLE_{ON,OFF}
 - Unify min/max level checks across sysfs/proc/syslog
+- Add find_and_remove_console_option to avoid affecting io/mmio options
 
 v3:
 
