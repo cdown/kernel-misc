@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-ver=4
+ver=5
 cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
@@ -21,6 +21,10 @@ git format-patch \
 sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: console: Per-console loglevels/' "$cov_file"
 
 cat << 'EOF' >> "$cov_file"
+
+v5:
+
+- Fix syntax in boot_delay
 
 v4:
 
