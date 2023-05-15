@@ -22,6 +22,15 @@ sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: console: Per-console loglevels/' "$
 
 cat << 'EOF' >> "$cov_file"
 
+v6:
+
+- Add .rst suffix to documentation in do_syslog
+- Add loglevel table to per-console-loglevel.rst and serial-console.rst
+- Add newlines between multiline bullets in per-console-loglevel.rst
+- Make effective_loglevel doc more clear
+- Remove ignore_per_console_loglevel doc, it's not shown in sysfs now
+- Use READ_ONCE/WRITE_ONCE for con->level
+
 v5:
 
 - Fix syntax in boot_delay
