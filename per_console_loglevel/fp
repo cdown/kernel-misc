@@ -30,6 +30,10 @@ v6:
 - Make effective_loglevel doc more clear
 - Remove ignore_per_console_loglevel doc, it's not shown in sysfs now
 - Use READ_ONCE/WRITE_ONCE for con->level
+- Ignore/restore per console loglevel in sysrq
+- Add new fields to comment above struct console
+- Remove now unused flags field on console_cmdline
+- Remove WARN_ON_ONCE(!con) in effective loglevel checks
 
 v5:
 
