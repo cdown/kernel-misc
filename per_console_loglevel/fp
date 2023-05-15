@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-ver=5
+ver=6
 cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
@@ -34,6 +34,10 @@ v6:
 - Add new fields to comment above struct console
 - Remove now unused flags field on console_cmdline
 - Remove WARN_ON_ONCE(!con) in effective loglevel checks
+- Avoid underflow in find_and_remove_console_option if val_buf_size == 0
+- Better error message on oversize in find_and_remove_loglevel_option
+- Reject if clamped in find_and_remove_loglevel_option
+- Clarify level setting logic in __add_preferred_console
 
 v5:
 
