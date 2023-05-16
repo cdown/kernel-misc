@@ -38,6 +38,7 @@ v6:
 - Better error message on oversize in find_and_remove_loglevel_option
 - Reject if clamped in find_and_remove_loglevel_option
 - Clarify level setting logic in __add_preferred_console
+- Move console emission check to printk_delay itself
 
 v5:
 
