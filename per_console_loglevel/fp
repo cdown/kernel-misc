@@ -39,6 +39,8 @@ v6:
 - Reject if clamped in find_and_remove_loglevel_option
 - Clarify level setting logic in __add_preferred_console
 - Move console emission check to printk_delay itself
+- Use console_src_read_flags in enabled_show
+- Infer if extended from con in printk_get_next_message, don't pass args
 
 v5:
 
