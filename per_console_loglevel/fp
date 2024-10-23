@@ -43,6 +43,8 @@ v6:
 - Infer if extended from con in printk_get_next_message, don't pass args
 - Remove misleading comment about early consoles in console_init
 - Use a goto in loglevel_store to avoid setting level in multiple places
+- Mention only @flags and @level are valid in printk_get_next_message
+- Use LOGLEVEL_DEBUG for max clamp in sysctls
 
 v5:
 
