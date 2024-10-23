@@ -46,6 +46,7 @@ v6:
 - Mention only @flags and @level are valid in printk_get_next_message
 - Use LOGLEVEL_DEBUG for max clamp in sysctls
 - Update for class_create interface changes
+- Move sysctl functionality out to sysfs.c
 
 v5:
 
