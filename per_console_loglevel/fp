@@ -66,7 +66,7 @@ v4:
 - Split out console_effective_loglevel functions per Petr's suggestion
 - Make boot_delay_msec/printk_delay check if it would be emitted
 - Simplify warning on SYSLOG_ACTION_CONSOLE_LEVEL
-- Save/restore ignore_per_console_loglevel on SYSLOG_ACTION_CONSOLE_{ON,OFF}
+- Save/restore ignore_per_console_loglevel on syslog console actions
 - Unify min/max level checks across sysfs/proc/syslog
 - Add find_and_remove_console_option to avoid affecting io/mmio options
 
