@@ -15,6 +15,7 @@ git format-patch \
     --cc 'Steven Rostedt <rostedt@goodmis.org>' \
     --cc 'John Ogness <john.ogness@linutronix.de>' \
     --cc 'Geert Uytterhoeven <geert@linux-m68k.org>' \
+    --cc 'Tony Lindgren <tony.lindgren@linux.intel.com>' \
     --cc kernel-team@fb.com \
     "$(git rev-parse linus/master)"..
 
