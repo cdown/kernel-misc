@@ -8,8 +8,8 @@ git format-patch \
     --thread \
     -v"$ver" \
     --base linus/master \
-    --to linux-kernel@vger.kernel.org \
-    --cc 'Petr Mladek <pmladek@suse.com>' \
+    --to 'Petr Mladek <pmladek@suse.com>' \
+    --cc linux-kernel@vger.kernel.org \
     --cc 'Greg Kroah-Hartman <gregkh@linuxfoundation.org>' \
     --cc 'Sergey Senozhatsky <senozhatsky@chromium.org>' \
     --cc 'Steven Rostedt <rostedt@goodmis.org>' \
