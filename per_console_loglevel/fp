@@ -48,6 +48,8 @@ v6:
 - Use LOGLEVEL_DEBUG for max clamp in sysctls
 - Update for class_create interface changes
 - Move sysctl functionality out to sysfs.c
+- Purge default_console_loglevel
+- Update sysctl docs for kernel.printk deprecation
 
 v5:
 
