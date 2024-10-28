@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-ver=6
+ver=7
 cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
@@ -22,6 +22,10 @@ git format-patch \
 sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: console: Per-console loglevels/' "$cov_file"
 
 cat << 'EOF' >> "$cov_file"
+
+v7:
+
+- Use indicative mood for maintainers patch
 
 v6:
 
