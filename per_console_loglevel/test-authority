@@ -33,12 +33,12 @@ check_effective 7
 check_effective_source global
 
 # If we set locally, we take that
-set_local 0
-check_effective 0
+set_local 1
+check_effective 1
 check_effective_source local
 
-set_local 8
-check_effective 8
+set_local 9
+check_effective 9
 check_effective_source local
 
 set_local 5
