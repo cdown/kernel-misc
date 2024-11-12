@@ -29,6 +29,8 @@ v7:
 - Clarify comment in printk_get_next_message
 - Describe loglevel logic in core infrastructure commit
 - Move sysrq code into separate patch
+- per_console_loglevel_is_set -> has_per_console_loglevel
+- Add lockdep check to has_per_console_loglevel
 
 v6:
 
