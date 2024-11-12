@@ -26,6 +26,9 @@ cat << 'EOF' >> "$cov_file"
 v7:
 
 - Use indicative mood for maintainers patch
+- Clarify comment in printk_get_next_message
+- Describe loglevel logic in core infrastructure commit
+- Move sysrq code into separate patch
 
 v6:
 
