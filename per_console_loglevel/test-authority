@@ -13,14 +13,13 @@ set_ignore_per_console_loglevel() { echo "$1" > /sys/module/printk/parameters/ig
 check_effective() { [[ "$(cat /sys/class/console/ttyS0/effective_loglevel)" == "$1" ]]; }
 check_effective_source() { [[ "$(cat /sys/class/console/ttyS0/effective_loglevel_source)" == "$1" ]]; }
 
-# All controls are 0 or unset
 reset() {
-    set_printk '0 0 0 0'
-    set_global 0
+    set_printk '1 1 1 1'
+    set_global 1
     set_local -1
     set_ignore_loglevel 0
     set_ignore_per_console_loglevel 0
-    check_effective 0
+    check_effective 1
     check_effective_source global
 }
 
@@ -33,8 +32,8 @@ check_effective 7
 check_effective_source global
 
 # If we set locally, we take that
-set_local 1
-check_effective 1
+set_local 2
+check_effective 2
 check_effective_source local
 
 set_local 9
@@ -50,11 +49,13 @@ check_effective_source local
 ( ! set_local 20 )
 ( ! set_global -2 )
 ( ! set_local -2 )
+( ! set_global 0 )
+( ! set_local 0 )
 check_effective 5
 check_effective_source local
 
 # If minimum gets set, then we don't change things, but don't allow setting again
-set_printk '0 0 7 0'
+set_printk '1 1 7 1'
 check_effective 5
 check_effective_source local
 
@@ -62,9 +63,9 @@ check_effective_source local
 check_effective 5
 check_effective_source local
 
-# Can unset. minimum is completely ignored if 0 was already there
+# Can unset. minimum is completely ignored if 1 was already there
 set_local -1
-check_effective 0
+check_effective 1
 check_effective_source global
 
 # If ignore_per_console_loglevel is set, we should only respect global
@@ -101,7 +102,7 @@ set_global 7
 set_local 5
 set_ignore_per_console_loglevel 1
 set_syslog_con_off
-check_effective 0  # the minimum console loglevel
+check_effective 1
 check_effective_source global
 set_syslog_con_on
 check_effective 7  # the previous global loglevel, since we were ignoring
@@ -109,7 +110,7 @@ check_effective_source global
 
 set_ignore_per_console_loglevel 0
 set_syslog_con_off
-check_effective 0  # the minimum console loglevel
+check_effective 1
 check_effective_source global
 set_syslog_con_on
 check_effective 5  # the previous local loglevel, since we were not ignoring
