@@ -36,8 +36,8 @@ set_local 2
 check_effective 2
 check_effective_source local
 
-set_local 9
-check_effective 9
+set_local 8
+check_effective 8
 check_effective_source local
 
 set_local 5
