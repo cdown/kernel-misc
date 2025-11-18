@@ -64,7 +64,7 @@ v7:
 - Rename clamp_loglevel() to console_clamp_loglevel() for clarity
 - Add kernel doc comments for internal API functions where it helps
 - Initialise classdev in try_enable_default_console() explicitly
-- Mark console devices as no-callback for runtime PM
+- Mark console devices with device_set_pm_not_required()
 - Add syslog_lock around SYSLOG_ACTION_CONSOLE_{OFF,ON}
 
 v6:
