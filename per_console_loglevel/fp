@@ -23,6 +23,11 @@ sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: console: Per-console loglevels/' "$
 
 cat << 'EOF' >> "$cov_file"
 
+There was a lot of review feedback last round, I sincerely hope I didn't
+miss anything :-)
+
+Thanks, Petr, Greg, John, and Tony for the feedback and reviews.
+
 v7:
 
 - Disallow writing -1 to the global console_loglevel sysctl
