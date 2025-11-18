@@ -7,7 +7,7 @@ git format-patch \
     --cover-letter \
     --thread \
     -v"$ver" \
-    --base linus/master \
+    --base printk/for-6.19 \
     --to 'Petr Mladek <pmladek@suse.com>' \
     --cc linux-kernel@vger.kernel.org \
     --cc 'Greg Kroah-Hartman <gregkh@linuxfoundation.org>' \
@@ -17,7 +17,7 @@ git format-patch \
     --cc 'Geert Uytterhoeven <geert@linux-m68k.org>' \
     --cc 'Tony Lindgren <tony.lindgren@linux.intel.com>' \
     --cc kernel-team@fb.com \
-    "$(git rev-parse linus/master)"..
+    "$(git rev-parse printk/for-6.19)"..
 
 sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: console: Per-console loglevels/' "$cov_file"
 
