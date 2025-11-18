@@ -25,12 +25,46 @@ cat << 'EOF' >> "$cov_file"
 
 v7:
 
-- Use indicative mood for maintainers patch
-- Clarify comment in printk_get_next_message
-- Describe loglevel logic in core infrastructure commit
-- Move sysrq code into separate patch
-- per_console_loglevel_is_set -> has_per_console_loglevel
-- Add lockdep check to has_per_console_loglevel
+- Disallow writing -1 to the global console_loglevel sysctl
+- Change printk_get_next_message() to take effective loglevel
+- Update suppress_message_printing() to take effective loglevel
+- Use CONSOLE_LOGLEVEL_MOTORMOUTH for devkmsg_read()
+- Fix documentation per Petr's review comments
+- Add console_srcu_read_loglevel() for lockless reading
+- Rename per_console_loglevel_is_set() to has_per_console_loglevel()
+- Refactor API to take int con_level for better lockdep checking
+- Update callers to read con_level using console_srcu_read_loglevel()
+- Remove hierarchy comment since it's obvious from the code
+- Use LOGLEVEL_DEFAULT as base level instead of hardcoded -1
+- Use pr_warn_once() in sysrq handling instead of manual warned variable
+- Split sysrq handling into separate commit
+- Update code/ABI documentation to change loglevel bounds from 0 to 1
+- Remove 'enabled' attribute from sysfs interface
+- Move #ifdefs out of sysfs.c
+- Fix console_clamp_loglevel() to use documented bounds
+- Initialise classdev and level in try_enable_default_console()
+- Fix race condition, use console_list_lock() in console_setup_class()
+- Remove NULL check before device_unregister()
+- Add data_race() annotations to READ_ONCE/WRITE_ONCE for KCSAN
+- Remove pr_warn() for unknown loglevel source
+- Add error handling for kzalloc() failure
+- Make console_class constant via class_register() per Greg
+- Export do_proc_dointvec() and do_proc_dointvec_conv()
+- Refactor to use @conv callback approach
+- Rename printk_console_loglevel() to proc_dointvec_console_loglevel()
+- Simplify level assignment to `newcon->level = c->level;` per Petr
+- Add missing loglevel= parameter documentation
+- Change printk_sysctl_deprecated to proc_dointvec_printk_deprecated
+- Add missing kernel parameter documentation for ignore_loglevel
+- Reject KERN_EMERG (0) consistently
+- Add comprehensive usage examples to per-console-loglevel.rst
+- Add troubleshooting section with common issues and solutions
+- Update ABI documentation with error conditions and permissions
+- Document new struct console fields (level and classdev)
+- Rename clamp_loglevel() to console_clamp_loglevel() for clarity
+- Add kernel doc comments for internal API functions where it helps
+- Initialise classdev in try_enable_default_console() explicitly
+- Mark console devices as no-callback for runtime PM
 
 v6:
 
