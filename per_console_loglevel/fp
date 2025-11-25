@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-ver=7
+ver=8
 cov_file="v${ver}-0000-cover-letter.patch"
 
 git format-patch \
@@ -23,10 +23,12 @@ sed -i 's/\*\*\* SUBJECT HERE \*\*\*/printk: console: Per-console loglevels/' "$
 
 cat << 'EOF' >> "$cov_file"
 
-There was a lot of review feedback last round, I sincerely hope I didn't
-miss anything :-)
+v8:
 
-Thanks, Petr, Greg, John, and Tony for the feedback and reviews.
+- Fix console classdev release
+- Guard nbcon atomic flush with console SRCU to match flag/loglevel reads
+- Enforce minimum_console_loglevel limit in the console_loglevel sysctl
+- Fix netconsole documentation example to not list enabled attribute
 
 v7:
 
