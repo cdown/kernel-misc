@@ -29,6 +29,8 @@ v8:
 - Guard nbcon atomic flush with console SRCU to match flag/loglevel reads
 - Enforce minimum_console_loglevel limit in the console_loglevel sysctl
 - Fix netconsole documentation example to not list enabled attribute
+- Restore per-console loglevels after SYSLOG_ACTION_CONSOLE_LEVEL re-enables logging
+- Document the SRCU pinning requirement when updating per-console loglevels via sysfs
 
 v7:
 
