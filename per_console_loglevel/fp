@@ -31,6 +31,7 @@ v8:
 - Fix netconsole documentation example to not list enabled attribute
 - Restore per-console loglevels after SYSLOG_ACTION_CONSOLE_LEVEL re-enables logging
 - Document the SRCU pinning requirement when updating per-console loglevels via sysfs
+- Treat console loglevel-only cmdline options as "no UART options" so drivers keep default baud
 
 v7:
 
