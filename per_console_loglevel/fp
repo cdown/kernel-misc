@@ -35,6 +35,16 @@ v8:
 - Treat console loglevel-only cmdline options as "no UART options" so drivers keep default baud
 - Only consider enabled consoles when deciding if printk_delay() can be skipped
 - Copy console= option strings before stripping loglevel: to avoid RO writes
+- Restore console_srcu_read_flags() comment describing READ/WRITE pairing
+- Drop redundant LOGLEVEL_DEFAULT assignments in register_console() paths
+- Document that device_unregister() already drops the console classdev ref
+- Remove default console level/classdev reinitialization before setup()
+- Replace sysfs loglevel SRCU usage with lockless helpers
+- Fix grammar in deprecated sysfs attribute text
+- Correct runtime/common example loglevel commands for strict < semantics
+- Replace Performance Impact section with Petr's nbcon guidance
+- Remove obsolete minimum_console_loglevel failure subsection
+- Clarify high-loglevel edge case still exposes data via dmesg/syslogd
 - Parse message prefixes before invoking printk_delay() so LOGLEVEL_DEFAULT callers benefit
 - Initialise consoles with LOGLEVEL_DEFAULT so sysfs never exposes the forbidden value 0
 
