@@ -30,6 +30,8 @@ v8:
 - Enforce minimum_console_loglevel limit in the console_loglevel sysctl
 - Fix netconsole documentation example to not list enabled attribute
 - Restore per-console loglevels after SYSLOG_ACTION_CONSOLE_LEVEL re-enables logging
+- Make SYSLOG_ACTION_CONSOLE_{ON,OFF} only restore ignore_per_console_loglevel when they forced it
+- Explain in-code why the forced-ignore tracking is necessary
 - Keep sysrq loglevel overrides from clobbering per-console configuration
 - Document the SRCU pinning requirement when updating per-console loglevels via sysfs
 - Treat console loglevel-only cmdline options as "no UART options" so drivers keep default baud
@@ -47,6 +49,9 @@ v8:
 - Clarify high-loglevel edge case still exposes data via dmesg/syslogd
 - Parse message prefixes before invoking printk_delay() so LOGLEVEL_DEFAULT callers benefit
 - Initialise consoles with LOGLEVEL_DEFAULT so sysfs never exposes the forbidden value 0
+- Handle dev_set_name() failures when creating console class devices
+- Guard find_and_remove_console_option() against zero-length value buffers
+- Emit an error when class_register() fails during console sysfs setup
 
 v7:
 
