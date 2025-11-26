@@ -45,7 +45,7 @@ v8:
 - Replace sysfs loglevel SRCU usage with lockless helpers
 - Fix grammar in deprecated sysfs attribute text
 - Correct runtime/common example loglevel commands for strict < semantics
-- Replace Performance Impact section with Petr's nbcon guidance
+- Replace performance impact section with Petr's nbcon guidance
 - Remove obsolete minimum_console_loglevel failure subsection
 - Clarify high-loglevel edge case still exposes data via dmesg/syslogd
 - Parse message prefixes before invoking printk_delay() so LOGLEVEL_DEFAULT callers benefit
