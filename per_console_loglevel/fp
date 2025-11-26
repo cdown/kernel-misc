@@ -33,6 +33,7 @@ v8:
 - Make SYSLOG_ACTION_CONSOLE_{ON,OFF} only restore ignore_per_console_loglevel when they forced it
 - Explain in-code why the forced-ignore tracking is necessary
 - Keep sysrq loglevel overrides from clobbering per-console configuration
+- Teach kdb register dumps to override per-console loglevels so output stays visible
 - Document the SRCU pinning requirement when updating per-console loglevels via sysfs
 - Treat console loglevel-only cmdline options as "no UART options" so drivers keep default baud
 - Only consider enabled consoles when deciding if printk_delay() can be skipped
@@ -52,6 +53,7 @@ v8:
 - Handle dev_set_name() failures when creating console class devices
 - Guard find_and_remove_console_option() against zero-length value buffers
 - Emit an error when class_register() fails during console sysfs setup
+- Drop unused has_per_console_loglevel() helper that accessed SRCU state locklessly
 
 v7:
 
