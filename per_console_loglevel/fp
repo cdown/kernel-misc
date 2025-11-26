@@ -35,6 +35,8 @@ v8:
 - Treat console loglevel-only cmdline options as "no UART options" so drivers keep default baud
 - Only consider enabled consoles when deciding if printk_delay() can be skipped
 - Copy console= option strings before stripping loglevel: to avoid RO writes
+- Parse message prefixes before invoking printk_delay() so LOGLEVEL_DEFAULT callers benefit
+- Initialise consoles with LOGLEVEL_DEFAULT so sysfs never exposes the forbidden value 0
 
 v7:
 
