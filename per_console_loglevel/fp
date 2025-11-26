@@ -32,6 +32,8 @@ v8:
 - Restore per-console loglevels after SYSLOG_ACTION_CONSOLE_LEVEL re-enables logging
 - Document the SRCU pinning requirement when updating per-console loglevels via sysfs
 - Treat console loglevel-only cmdline options as "no UART options" so drivers keep default baud
+- Only consider enabled consoles when deciding if printk_delay() can be skipped
+- Copy console= option strings before stripping loglevel: to avoid RO writes
 
 v7:
 
