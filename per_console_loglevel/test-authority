@@ -168,16 +168,29 @@ reset() {
 }
 
 # Module management for ttynull
+# Supports both modprobe (if in /lib/modules) and insmod (if at /tmp/ttynull.ko)
+TTYNULL_KO_PATH="${TTYNULL_KO_PATH:-/tmp/ttynull.ko}"
+
 load_ttynull() {
-    if ! lsmod | grep -q '^ttynull'; then
-        if modprobe ttynull 2>/dev/null; then
-            sleep 0.5  # Give sysfs time to populate
+    if lsmod | grep -q '^ttynull'; then
+        return 0
+    fi
+
+    # Try modprobe first
+    if modprobe ttynull 2>/dev/null; then
+        sleep 0.5  # Give sysfs time to populate
+        return 0
+    fi
+
+    # Fall back to insmod if module file exists
+    if [[ -f "$TTYNULL_KO_PATH" ]]; then
+        if insmod "$TTYNULL_KO_PATH" 2>/dev/null; then
+            sleep 0.5
             return 0
-        else
-            return 1
         fi
     fi
-    return 0
+
+    return 1
 }
 
 unload_ttynull() {
@@ -189,7 +202,19 @@ unload_ttynull() {
 }
 
 is_ttynull_available() {
-    modprobe --dry-run ttynull 2>/dev/null
+    # Check if already loaded
+    if lsmod | grep -q '^ttynull'; then
+        return 0
+    fi
+    # Check if modprobe can find it
+    if modprobe --dry-run ttynull 2>/dev/null; then
+        return 0
+    fi
+    # Check if insmod file exists
+    if [[ -f "$TTYNULL_KO_PATH" ]]; then
+        return 0
+    fi
+    return 1
 }
 
 #
