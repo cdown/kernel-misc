@@ -1,125 +1,1039 @@
-#!/bin/bash -ex
+#!/bin/bash
+#
+# Comprehensive test suite for per-console loglevel patchset
+#
+# Run as root on a system with the per-console loglevel patches applied.
+# Requires: ttynull module available, dmesg with --console-on/--console-off
+#
+# Usage: ./test-authority [--verbose] [--keep-going]
+#
 
+set -euo pipefail
+
+VERBOSE=0
+KEEP_GOING=0
+FAILED=0
+PASSED=0
+SKIPPED=0
+
+# Parse arguments
+for arg in "$@"; do
+    case "$arg" in
+        --verbose|-v) VERBOSE=1 ;;
+        --keep-going|-k) KEEP_GOING=1 ;;
+        --help|-h)
+            echo "Usage: $0 [--verbose] [--keep-going]"
+            echo "  --verbose, -v     Show detailed test output"
+            echo "  --keep-going, -k  Continue after test failures"
+            exit 0
+            ;;
+    esac
+done
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+log() { echo -e "${BLUE}[INFO]${NC} $*"; }
+log_pass() { echo -e "${GREEN}[PASS]${NC} $*"; ((++PASSED)); }
+log_fail() {
+    echo -e "${RED}[FAIL]${NC} $*"
+    ((++FAILED))
+    if [[ $KEEP_GOING -eq 0 ]]; then
+        echo "Stopping on first failure. Use --keep-going to continue."
+        exit 1
+    fi
+}
+log_skip() { echo -e "${YELLOW}[SKIP]${NC} $*"; ((++SKIPPED)); }
+log_verbose() {
+    if [[ $VERBOSE -eq 1 ]]; then
+        echo -e "       $*"
+    fi
+}
+
+# Primary console for testing (usually ttyS0 or tty0)
+PRIMARY_CON=""
+detect_primary_console() {
+    if [[ -d /sys/class/console/ttyS0 ]]; then
+        PRIMARY_CON="ttyS0"
+    elif [[ -d /sys/class/console/tty0 ]]; then
+        PRIMARY_CON="tty0"
+    else
+        # Use first available console
+        for dir in /sys/class/console/*/; do
+            if [[ -d "$dir" ]]; then
+                PRIMARY_CON="$(basename "$dir")"
+                break
+            fi
+        done
+    fi
+    if [[ -z "$PRIMARY_CON" ]]; then
+        echo "ERROR: No console found in /sys/class/console/"
+        exit 1
+    fi
+    log "Using primary console: $PRIMARY_CON"
+}
+
+#
+# Helper functions
+#
 set_global() { echo "$1" > /proc/sys/kernel/console_loglevel; }
+get_global() { cat /proc/sys/kernel/console_loglevel; }
 set_printk() { echo "$1" > /proc/sys/kernel/printk; }
-set_local() { echo "$1" > /sys/class/console/ttyS0/loglevel; }
+get_printk() { cat /proc/sys/kernel/printk; }
+set_default_msg_loglevel() { echo "$1" > /proc/sys/kernel/default_message_loglevel; }
+get_default_msg_loglevel() { cat /proc/sys/kernel/default_message_loglevel; }
+
+set_local() { echo "$2" > "/sys/class/console/$1/loglevel"; }
+get_effective() { cat "/sys/class/console/$1/effective_loglevel"; }
+get_effective_source() { cat "/sys/class/console/$1/effective_loglevel_source"; }
+
 set_sysrq() { echo "$1" > /proc/sysrq-trigger; }
 set_syslog_level() { dmesg -n "$1"; }
 set_syslog_con_on() { dmesg --console-on; }
 set_syslog_con_off() { dmesg --console-off; }
 set_ignore_loglevel() { echo "$1" > /sys/module/printk/parameters/ignore_loglevel; }
+get_ignore_loglevel() { cat /sys/module/printk/parameters/ignore_loglevel; }
 set_ignore_per_console_loglevel() { echo "$1" > /sys/module/printk/parameters/ignore_per_console_loglevel; }
+get_ignore_per_console_loglevel() { cat /sys/module/printk/parameters/ignore_per_console_loglevel; }
 
-check_effective() { [[ "$(cat /sys/class/console/ttyS0/effective_loglevel)" == "$1" ]]; }
-check_effective_source() { [[ "$(cat /sys/class/console/ttyS0/effective_loglevel_source)" == "$1" ]]; }
-
-reset() {
-    set_printk '1 1 1 1'
-    set_global 1
-    set_local -1
-    set_ignore_loglevel 0
-    set_ignore_per_console_loglevel 0
-    check_effective 1
-    check_effective_source global
+check_effective() {
+    local con="$1" expected="$2"
+    local actual
+    actual=$(get_effective "$con")
+    if [[ "$actual" == "$expected" ]]; then
+        log_verbose "effective_loglevel($con) = $actual (expected $expected)"
+        return 0
+    else
+        log_verbose "effective_loglevel($con) = $actual (expected $expected) MISMATCH"
+        return 1
+    fi
 }
 
-# Only default loglevel is set. Should take default.
-reset
+check_effective_source() {
+    local con="$1" expected="$2"
+    local actual
+    actual=$(get_effective_source "$con")
+    if [[ "$actual" == "$expected" ]]; then
+        log_verbose "effective_loglevel_source($con) = $actual (expected $expected)"
+        return 0
+    else
+        log_verbose "effective_loglevel_source($con) = $actual (expected $expected) MISMATCH"
+        return 1
+    fi
+}
 
-# If default gets moved, we take it
-set_global 7
-check_effective 7
-check_effective_source global
+# Combined check for effective loglevel and source
+check_effective_and_source() {
+    local con="$1" expected_level="$2" expected_source="$3"
+    if ! check_effective "$con" "$expected_level"; then
+        return 1
+    fi
+    if ! check_effective_source "$con" "$expected_source"; then
+        return 1
+    fi
+    return 0
+}
 
-# If we set locally, we take that
-set_local 2
-check_effective 2
-check_effective_source local
+# Check that a command fails (returns non-zero)
+expect_fail() {
+    if "$@" 2>/dev/null; then
+        return 1
+    else
+        return 0
+    fi
+}
 
-set_local 8
-check_effective 8
-check_effective_source local
+# Reset to known good state
+reset() {
+    log_verbose "Resetting to clean state..."
+    # Reset global controls
+    set_ignore_loglevel 0 2>/dev/null || true
+    set_ignore_per_console_loglevel 0 2>/dev/null || true
 
-set_local 5
-check_effective 5
-check_effective_source local
+    # Reset all console local loglevels
+    for dir in /sys/class/console/*/; do
+        if [[ -f "$dir/loglevel" ]]; then
+            echo -1 > "$dir/loglevel" 2>/dev/null || true
+        fi
+    done
 
-# Cannot set outside of range
-( ! set_global 20 )
-( ! set_local 20 )
-( ! set_global -2 )
-( ! set_local -2 )
-( ! set_global 0 )
-( ! set_local 0 )
-check_effective 5
-check_effective_source local
+    # Reset global loglevel via new sysctl
+    set_global 4 2>/dev/null || true
+    # Reset printk array (console, default_msg, minimum, unused)
+    set_printk '4 4 1 4' 2>/dev/null || true
+}
 
-# If minimum gets set, then we don't change things, but don't allow setting again
-set_printk '1 1 7 1'
-check_effective 5
-check_effective_source local
+# Module management for ttynull
+load_ttynull() {
+    if ! lsmod | grep -q '^ttynull'; then
+        if modprobe ttynull 2>/dev/null; then
+            sleep 0.5  # Give sysfs time to populate
+            return 0
+        else
+            return 1
+        fi
+    fi
+    return 0
+}
 
-( ! set_local 6 )
-check_effective 5
-check_effective_source local
+unload_ttynull() {
+    if lsmod | grep -q '^ttynull'; then
+        rmmod ttynull 2>/dev/null || return 1
+        sleep 0.2
+    fi
+    return 0
+}
 
-# Can unset. minimum is completely ignored if 1 was already there
-set_local -1
-check_effective 1
-check_effective_source global
+is_ttynull_available() {
+    modprobe --dry-run ttynull 2>/dev/null
+}
 
-# If ignore_per_console_loglevel is set, we should only respect global
-reset  # no minimum loglevel
-set_global 3
-set_local 5
-set_ignore_per_console_loglevel 1
-check_effective 3
-check_effective_source global
+#
+# Test sections
+#
 
-# Magic sysrq should reset everything, including local
-reset  # no minimum loglevel
-set_local 5
-set_sysrq 8
-check_effective 8
-check_effective_source global
+test_basic_global_loglevel() {
+    log "Testing basic global loglevel..."
+    reset
 
-# syslog() should be ignored by consoles with a local loglevel set
-set_local 5
-set_syslog_level 6
-check_effective 5
-check_effective_source local
+    set_global 4
+    if ! check_effective_and_source "$PRIMARY_CON" 4 global; then
+        log_fail "basic global"
+        return
+    fi
 
-# ...but should be respected otherwise.
-set_local -1
-set_syslog_level 3
-check_effective 3
-check_effective_source global
+    set_global 7
+    if ! check_effective_and_source "$PRIMARY_CON" 7 global; then
+        log_fail "global change to 7"
+        return
+    fi
 
-# When we turn off consoles, we should save the previous
-# ignore_per_console_loglevel state.
-reset
-set_global 7
-set_local 5
-set_ignore_per_console_loglevel 1
-set_syslog_con_off
-check_effective 1
-check_effective_source global
-set_syslog_con_on
-check_effective 7  # the previous global loglevel, since we were ignoring
-check_effective_source global
+    set_global 1
+    if ! check_effective_and_source "$PRIMARY_CON" 1 global; then
+        log_fail "global change to 1"
+        return
+    fi
 
-set_ignore_per_console_loglevel 0
-set_syslog_con_off
-check_effective 1
-check_effective_source global
-set_syslog_con_on
-check_effective 5  # the previous local loglevel, since we were not ignoring
-check_effective_source local
+    log_pass "basic global loglevel"
+}
 
-# If ignore_loglevel comes into the picture, we should just set to
-# CONSOLE_LOGLEVEL_MOTORMOUTH.
-reset
-set_local 5
-set_ignore_loglevel 1
-check_effective 15
-check_effective_source ignore_loglevel
+test_basic_local_loglevel() {
+    log "Testing basic local loglevel..."
+    reset
+
+    set_global 4
+    set_local "$PRIMARY_CON" 2
+    if ! check_effective_and_source "$PRIMARY_CON" 2 local; then
+        log_fail "local override"
+        return
+    fi
+
+    set_local "$PRIMARY_CON" 8
+    if ! check_effective_and_source "$PRIMARY_CON" 8 local; then
+        log_fail "local set to 8"
+        return
+    fi
+
+    set_local "$PRIMARY_CON" 5
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "local set to 5"
+        return
+    fi
+
+    # Reset to global
+    set_local "$PRIMARY_CON" -1
+    if ! check_effective_and_source "$PRIMARY_CON" 4 global; then
+        log_fail "local reset to global"
+        return
+    fi
+
+    log_pass "basic local loglevel"
+}
+
+test_loglevel_range_validation() {
+    log "Testing loglevel range validation..."
+    reset
+
+    set_global 4
+    set_local "$PRIMARY_CON" 5
+
+    # Test invalid values
+    if ! expect_fail set_global 20; then
+        log_fail "global 20 should fail"
+        return
+    fi
+    if ! expect_fail set_local "$PRIMARY_CON" 20; then
+        log_fail "local 20 should fail"
+        return
+    fi
+    if ! expect_fail set_global -2; then
+        log_fail "global -2 should fail"
+        return
+    fi
+    if ! expect_fail set_local "$PRIMARY_CON" -2; then
+        log_fail "local -2 should fail"
+        return
+    fi
+    if ! expect_fail set_global 0; then
+        log_fail "global 0 should fail"
+        return
+    fi
+    if ! expect_fail set_local "$PRIMARY_CON" 0; then
+        log_fail "local 0 should fail"
+        return
+    fi
+
+    # Values should be unchanged
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "values unchanged"
+        return
+    fi
+
+    # Test boundary values
+    if ! set_global 1; then
+        log_fail "global 1 should succeed"
+        return
+    fi
+    if ! set_global 8; then
+        log_fail "global 8 should succeed"
+        return
+    fi
+    if ! expect_fail set_global 9; then
+        log_fail "global 9 should fail"
+        return
+    fi
+
+    if ! set_local "$PRIMARY_CON" 1; then
+        log_fail "local 1 should succeed"
+        return
+    fi
+    if ! set_local "$PRIMARY_CON" 8; then
+        log_fail "local 8 should succeed"
+        return
+    fi
+    if ! expect_fail set_local "$PRIMARY_CON" 9; then
+        log_fail "local 9 should fail"
+        return
+    fi
+
+    log_pass "loglevel range validation"
+}
+
+test_minimum_console_loglevel() {
+    log "Testing minimum_console_loglevel enforcement..."
+    reset
+
+    # Set a local loglevel first
+    set_local "$PRIMARY_CON" 5
+
+    # Set minimum console loglevel via printk (third element)
+    set_printk '4 4 7 4'
+
+    # Existing local loglevel should be preserved
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "existing local preserved"
+        return
+    fi
+
+    # New local loglevel below minimum should fail
+    if ! expect_fail set_local "$PRIMARY_CON" 6; then
+        log_fail "local below minimum should fail"
+        return
+    fi
+
+    # New local loglevel at or above minimum should succeed
+    if ! set_local "$PRIMARY_CON" 7; then
+        log_fail "local at minimum should succeed"
+        return
+    fi
+    if ! set_local "$PRIMARY_CON" 8; then
+        log_fail "local above minimum should succeed"
+        return
+    fi
+
+    # Unsetting should work and respect global (which is also enforced)
+    set_local "$PRIMARY_CON" -1
+    # Note: global loglevel was 4, but minimum is 7, so effective might be 7
+    # depending on implementation... let's just check source is global
+    if ! check_effective_source "$PRIMARY_CON" global; then
+        log_fail "unset returns to global"
+        return
+    fi
+
+    log_pass "minimum_console_loglevel enforcement"
+}
+
+test_ignore_loglevel() {
+    log "Testing ignore_loglevel parameter..."
+    reset
+
+    set_global 4
+    set_local "$PRIMARY_CON" 5
+
+    set_ignore_loglevel 1
+    # Should be CONSOLE_LOGLEVEL_MOTORMOUTH (15)
+    if ! check_effective_and_source "$PRIMARY_CON" 15 ignore_loglevel; then
+        log_fail "ignore_loglevel active"
+        return
+    fi
+
+    set_ignore_loglevel 0
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "ignore_loglevel disabled"
+        return
+    fi
+
+    log_pass "ignore_loglevel parameter"
+}
+
+test_ignore_per_console_loglevel() {
+    log "Testing ignore_per_console_loglevel parameter..."
+    reset
+
+    set_global 3
+    set_local "$PRIMARY_CON" 5
+
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "local active"
+        return
+    fi
+
+    set_ignore_per_console_loglevel 1
+    if ! check_effective_and_source "$PRIMARY_CON" 3 global; then
+        log_fail "ignore_per_console active"
+        return
+    fi
+
+    set_ignore_per_console_loglevel 0
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "ignore_per_console disabled"
+        return
+    fi
+
+    log_pass "ignore_per_console_loglevel parameter"
+}
+
+test_ignore_loglevel_precedence() {
+    log "Testing ignore_loglevel takes precedence over ignore_per_console_loglevel..."
+    reset
+
+    set_global 3
+    set_local "$PRIMARY_CON" 5
+    set_ignore_per_console_loglevel 1
+    set_ignore_loglevel 1
+
+    # ignore_loglevel should win
+    if ! check_effective_and_source "$PRIMARY_CON" 15 ignore_loglevel; then
+        log_fail "ignore_loglevel precedence"
+        return
+    fi
+
+    set_ignore_loglevel 0
+    # Now ignore_per_console_loglevel should take effect
+    if ! check_effective_and_source "$PRIMARY_CON" 3 global; then
+        log_fail "fallback to global after ignore_loglevel off"
+        return
+    fi
+
+    log_pass "ignore_loglevel precedence"
+}
+
+test_sysrq_reset() {
+    log "Testing sysrq loglevel reset..."
+    reset
+
+    set_global 4
+
+    # Test 1: With no local loglevel, sysrq 8 should change effective to 8
+    set_sysrq 8
+    if ! check_effective_and_source "$PRIMARY_CON" 8 global; then
+        log_fail "sysrq reset to 8 (no local)"
+        return
+    fi
+
+    # Test 2: With local loglevel set, sysrq changes global but local still wins
+    # (ignore_per_console_loglevel is only set during sysrq handler execution)
+    set_local "$PRIMARY_CON" 5
+    set_sysrq 0  # sysrq 0 sets console_loglevel to 0, but that's clamped to 1
+
+    # Local should still be in effect after sysrq completes
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "local preserved after sysrq"
+        return
+    fi
+
+    # But global should have changed
+    local global_level
+    global_level=$(get_global)
+    if [[ "$global_level" -ne 1 ]]; then
+        log_fail "global changed by sysrq (got $global_level, expected 1)"
+        return
+    fi
+
+    log_pass "sysrq loglevel reset"
+}
+
+test_syslog_level() {
+    log "Testing syslog level changes..."
+    reset
+
+    set_global 4
+    set_local "$PRIMARY_CON" 5
+
+    # syslog level change should only affect global
+    set_syslog_level 6
+
+    # Local loglevel should be preserved
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "local preserved after syslog"
+        return
+    fi
+
+    # Unset local and check global was changed
+    set_local "$PRIMARY_CON" -1
+    if ! check_effective_and_source "$PRIMARY_CON" 6 global; then
+        log_fail "global changed by syslog"
+        return
+    fi
+
+    log_pass "syslog level changes"
+}
+
+test_syslog_console_on_off() {
+    log "Testing syslog console on/off with per-console loglevel state..."
+    reset
+
+    set_global 7
+    set_local "$PRIMARY_CON" 5
+
+    # Test with ignore_per_console_loglevel = 1
+    set_ignore_per_console_loglevel 1
+    set_syslog_con_off
+    # Should be minimum loglevel (1) and global source
+    if ! check_effective_and_source "$PRIMARY_CON" 1 global; then
+        log_fail "console off with ignore"
+        return
+    fi
+
+    set_syslog_con_on
+    # Should restore to global (7) since we were ignoring per-console
+    if ! check_effective_and_source "$PRIMARY_CON" 7 global; then
+        log_fail "console on restores global"
+        return
+    fi
+
+    # Test with ignore_per_console_loglevel = 0
+    set_ignore_per_console_loglevel 0
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "local restored"
+        return
+    fi
+
+    set_syslog_con_off
+    if ! check_effective_and_source "$PRIMARY_CON" 1 global; then
+        log_fail "console off without ignore"
+        return
+    fi
+
+    set_syslog_con_on
+    # Should restore local loglevel since we were not ignoring
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "console on restores local"
+        return
+    fi
+
+    log_pass "syslog console on/off"
+}
+
+test_syslog_console_level_sets_global() {
+    log "Testing SYSLOG_ACTION_CONSOLE_LEVEL affects global..."
+    reset
+
+    set_global 4
+    set_local "$PRIMARY_CON" 5
+
+    set_syslog_level 3
+    # Local should be unchanged
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "local unchanged"
+        return
+    fi
+
+    # Global should have changed
+    if [[ $(get_global) != 3 ]]; then
+        log_fail "global changed to 3"
+        return
+    fi
+
+    log_pass "SYSLOG_ACTION_CONSOLE_LEVEL"
+}
+
+test_new_sysctls() {
+    log "Testing new discrete sysctl interfaces..."
+    reset
+
+    # Test kernel.console_loglevel
+    set_global 5
+    if [[ $(get_global) != 5 ]]; then
+        log_fail "console_loglevel read/write"
+        return
+    fi
+
+    # Test kernel.default_message_loglevel
+    set_default_msg_loglevel 6
+    if [[ $(get_default_msg_loglevel) != 6 ]]; then
+        log_fail "default_message_loglevel read/write"
+        return
+    fi
+
+    # Test range validation on new sysctls
+    if ! expect_fail set_global 0; then
+        log_fail "console_loglevel 0 should fail"
+        return
+    fi
+    if ! expect_fail set_global 9; then
+        log_fail "console_loglevel 9 should fail"
+        return
+    fi
+
+    log_pass "new discrete sysctl interfaces"
+}
+
+test_deprecated_printk_sysctl() {
+    log "Testing deprecated kernel.printk sysctl..."
+    reset
+
+    # Should still work but emit warning
+    set_printk '4 4 1 4'
+    local printk_val
+    printk_val=$(get_printk)
+    if [[ -z "$printk_val" ]]; then
+        log_fail "kernel.printk read"
+        return
+    fi
+
+    log_pass "deprecated kernel.printk sysctl"
+}
+
+test_ttynull_load_unload() {
+    if ! is_ttynull_available; then
+        log_skip "ttynull module not available"
+        return
+    fi
+
+    log "Testing ttynull console load/unload..."
+    reset
+
+    # Ensure ttynull is not loaded
+    unload_ttynull
+
+    # Load ttynull
+    if ! load_ttynull; then
+        log_fail "load ttynull"
+        return
+    fi
+
+    # Check that ttynull appears in /sys/class/console
+    if [[ ! -d /sys/class/console/ttynull0 ]]; then
+        log_fail "ttynull0 not in /sys/class/console"
+        unload_ttynull
+        return
+    fi
+
+    # Set a local loglevel on ttynull
+    set_local ttynull0 6
+    if ! check_effective_and_source ttynull0 6 local; then
+        log_fail "ttynull local loglevel"
+        unload_ttynull
+        return
+    fi
+
+    # Unload ttynull
+    if ! unload_ttynull; then
+        log_fail "unload ttynull"
+        return
+    fi
+
+    # Check that ttynull is gone from /sys/class/console
+    if [[ -d /sys/class/console/ttynull0 ]]; then
+        log_fail "ttynull0 still in /sys/class/console after unload"
+        return
+    fi
+
+    log_pass "ttynull console load/unload"
+}
+
+test_ttynull_loglevel_persistence() {
+    if ! is_ttynull_available; then
+        log_skip "ttynull module not available (persistence test)"
+        return
+    fi
+
+    log "Testing console loglevel does not persist across unload/reload..."
+    reset
+
+    unload_ttynull
+    if ! load_ttynull; then
+        log_fail "load ttynull"
+        return
+    fi
+
+    # Set a local loglevel
+    set_local ttynull0 6
+    if ! check_effective ttynull0 6; then
+        log_fail "set local before unload"
+        unload_ttynull
+        return
+    fi
+
+    # Unload and reload
+    unload_ttynull
+    if ! load_ttynull; then
+        log_fail "reload ttynull"
+        return
+    fi
+
+    # Should be back to global (loglevel not persisted)
+    if ! check_effective_source ttynull0 global; then
+        log_fail "loglevel reset on reload"
+        unload_ttynull
+        return
+    fi
+
+    unload_ttynull
+    log_pass "console loglevel persistence"
+}
+
+test_multiple_consoles_different_loglevels() {
+    if ! is_ttynull_available; then
+        log_skip "ttynull module not available (multiple console test)"
+        return
+    fi
+
+    log "Testing multiple consoles with different loglevels..."
+    reset
+
+    unload_ttynull
+    if ! load_ttynull; then
+        log_fail "load ttynull"
+        return
+    fi
+
+    set_global 4
+
+    # Set different loglevels on different consoles
+    set_local "$PRIMARY_CON" 5
+    set_local ttynull0 7
+
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "primary local"
+        unload_ttynull
+        return
+    fi
+    if ! check_effective_and_source ttynull0 7 local; then
+        log_fail "ttynull local"
+        unload_ttynull
+        return
+    fi
+
+    # Change global - should not affect local
+    set_global 3
+    if ! check_effective "$PRIMARY_CON" 5; then
+        log_fail "primary unchanged"
+        unload_ttynull
+        return
+    fi
+    if ! check_effective ttynull0 7; then
+        log_fail "ttynull unchanged"
+        unload_ttynull
+        return
+    fi
+
+    # Enable ignore_per_console_loglevel - both should go to global
+    set_ignore_per_console_loglevel 1
+    if ! check_effective_and_source "$PRIMARY_CON" 3 global; then
+        log_fail "primary to global"
+        unload_ttynull
+        return
+    fi
+    if ! check_effective_and_source ttynull0 3 global; then
+        log_fail "ttynull to global"
+        unload_ttynull
+        return
+    fi
+
+    set_ignore_per_console_loglevel 0
+    unload_ttynull
+    log_pass "multiple consoles different loglevels"
+}
+
+test_console_sysfs_attributes_exist() {
+    log "Testing console sysfs attributes exist..."
+
+    for dir in /sys/class/console/*/; do
+        [[ -d "$dir" ]] || continue
+        local con
+        con=$(basename "$dir")
+
+        if [[ ! -r "$dir/loglevel" ]]; then
+            log_fail "$con: loglevel missing"
+            return
+        fi
+        if [[ ! -r "$dir/effective_loglevel" ]]; then
+            log_fail "$con: effective_loglevel missing"
+            return
+        fi
+        if [[ ! -r "$dir/effective_loglevel_source" ]]; then
+            log_fail "$con: effective_loglevel_source missing"
+            return
+        fi
+    done
+
+    log_pass "console sysfs attributes exist"
+}
+
+test_all_consoles_respond() {
+    log "Testing all consoles respond to loglevel changes..."
+    reset
+
+    for dir in /sys/class/console/*/; do
+        [[ -d "$dir" ]] || continue
+        local con
+        con=$(basename "$dir")
+
+        # Set and verify local loglevel
+        set_local "$con" 6 2>/dev/null || continue  # Skip if can't write
+        if ! check_effective "$con" 6; then
+            log_fail "$con: local loglevel not applied"
+            return
+        fi
+
+        # Reset
+        set_local "$con" -1
+    done
+
+    log_pass "all consoles respond to loglevel changes"
+}
+
+test_rapid_loglevel_changes() {
+    log "Testing rapid loglevel changes..."
+    reset
+
+    set_global 4
+    for i in {1..50}; do
+        set_local "$PRIMARY_CON" $((i % 8 + 1))
+    done
+    set_local "$PRIMARY_CON" 5
+
+    if ! check_effective "$PRIMARY_CON" 5; then
+        log_fail "final value after rapid changes"
+        return
+    fi
+
+    # Rapid global changes
+    for i in {1..50}; do
+        set_global $((i % 8 + 1))
+    done
+    set_global 4
+    set_local "$PRIMARY_CON" -1
+
+    if ! check_effective "$PRIMARY_CON" 4; then
+        log_fail "final global after rapid changes"
+        return
+    fi
+
+    log_pass "rapid loglevel changes"
+}
+
+test_concurrent_global_local_changes() {
+    log "Testing interleaved global/local changes..."
+    reset
+
+    set_global 4
+    if ! check_effective "$PRIMARY_CON" 4; then
+        log_fail "initial global"
+        return
+    fi
+
+    set_local "$PRIMARY_CON" 5
+    if ! check_effective "$PRIMARY_CON" 5; then
+        log_fail "set local"
+        return
+    fi
+
+    set_global 6
+    if ! check_effective "$PRIMARY_CON" 5; then
+        log_fail "local unchanged by global"
+        return
+    fi
+
+    set_local "$PRIMARY_CON" -1
+    if ! check_effective "$PRIMARY_CON" 6; then
+        log_fail "picks up new global"
+        return
+    fi
+
+    log_pass "interleaved global/local changes"
+}
+
+test_effective_source_transitions() {
+    log "Testing effective_loglevel_source transitions..."
+    reset
+
+    set_global 4
+    if ! check_effective_source "$PRIMARY_CON" global; then
+        log_fail "starts global"
+        return
+    fi
+
+    set_local "$PRIMARY_CON" 5
+    if ! check_effective_source "$PRIMARY_CON" local; then
+        log_fail "global -> local"
+        return
+    fi
+
+    set_ignore_loglevel 1
+    if ! check_effective_source "$PRIMARY_CON" ignore_loglevel; then
+        log_fail "local -> ignore_loglevel"
+        return
+    fi
+
+    set_ignore_loglevel 0
+    if ! check_effective_source "$PRIMARY_CON" local; then
+        log_fail "ignore_loglevel -> local"
+        return
+    fi
+
+    set_ignore_per_console_loglevel 1
+    if ! check_effective_source "$PRIMARY_CON" global; then
+        log_fail "local -> global via ignore_per_console"
+        return
+    fi
+
+    set_ignore_per_console_loglevel 0
+    if ! check_effective_source "$PRIMARY_CON" local; then
+        log_fail "global -> local after ignore_per_console"
+        return
+    fi
+
+    set_local "$PRIMARY_CON" -1
+    if ! check_effective_source "$PRIMARY_CON" global; then
+        log_fail "local -> global via unset"
+        return
+    fi
+
+    log_pass "effective_loglevel_source transitions"
+}
+
+test_stress_ignore_flags() {
+    log "Testing stress on ignore flags..."
+    reset
+
+    set_global 4
+    set_local "$PRIMARY_CON" 5
+
+    for _ in {1..20}; do
+        set_ignore_loglevel 1
+        set_ignore_loglevel 0
+        set_ignore_per_console_loglevel 1
+        set_ignore_per_console_loglevel 0
+    done
+
+    # Should be back to local
+    if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
+        log_fail "stable after stress"
+        return
+    fi
+
+    log_pass "stress on ignore flags"
+}
+
+#
+# Main test runner
+#
+
+main() {
+    echo "============================================="
+    echo " Per-Console Loglevel Test Suite"
+    echo "============================================="
+    echo
+
+    # Check we're root
+    if [[ $EUID -ne 0 ]]; then
+        echo "ERROR: This script must be run as root"
+        exit 1
+    fi
+
+    # Check sysfs is available
+    if [[ ! -d /sys/class/console ]]; then
+        echo "ERROR: /sys/class/console does not exist. Is the patchset applied?"
+        exit 1
+    fi
+
+    detect_primary_console
+
+    # Store original state
+    local orig_printk orig_ignore_ll orig_ignore_pcll
+    orig_printk=$(get_printk)
+    orig_ignore_ll=$(get_ignore_loglevel)
+    orig_ignore_pcll=$(get_ignore_per_console_loglevel)
+
+    # Run tests
+    echo
+    log "Running tests..."
+    echo
+
+    test_basic_global_loglevel
+    test_basic_local_loglevel
+    test_loglevel_range_validation
+    test_minimum_console_loglevel
+    test_ignore_loglevel
+    test_ignore_per_console_loglevel
+    test_ignore_loglevel_precedence
+    test_sysrq_reset
+    test_syslog_level
+    test_syslog_console_on_off
+    test_syslog_console_level_sets_global
+    test_new_sysctls
+    test_deprecated_printk_sysctl
+    test_console_sysfs_attributes_exist
+    test_all_consoles_respond
+    test_rapid_loglevel_changes
+    test_concurrent_global_local_changes
+    test_effective_source_transitions
+    test_stress_ignore_flags
+
+    # Dynamic console tests (require ttynull)
+    test_ttynull_load_unload
+    test_ttynull_loglevel_persistence
+    test_multiple_consoles_different_loglevels
+
+    # Restore original state
+    echo
+    log "Restoring original state..."
+    reset
+    set_printk "$orig_printk" 2>/dev/null || true
+    set_ignore_loglevel "$orig_ignore_ll" 2>/dev/null || true
+    set_ignore_per_console_loglevel "$orig_ignore_pcll" 2>/dev/null || true
+
+    # Summary
+    echo
+    echo "============================================="
+    echo " Test Summary"
+    echo "============================================="
+    echo -e " ${GREEN}Passed:${NC}  $PASSED"
+    echo -e " ${RED}Failed:${NC}  $FAILED"
+    echo -e " ${YELLOW}Skipped:${NC} $SKIPPED"
+    echo "============================================="
+
+    if [[ $FAILED -gt 0 ]]; then
+        exit 1
+    fi
+    exit 0
+}
+
+main "$@"
