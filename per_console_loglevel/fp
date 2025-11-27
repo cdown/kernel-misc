@@ -25,27 +25,25 @@ cat << 'EOF' >> "$cov_file"
 
 v8:
 
-- Fix console classdev release
-- Guard nbcon atomic flush with console SRCU to match flag/loglevel reads
-- Enforce minimum_console_loglevel limit in the console_loglevel sysctl
-- Fix netconsole documentation example to not list enabled attribute
-- Restore per-console loglevels after SYSLOG_ACTION_CONSOLE_LEVEL re-enables logging
-- Make SYSLOG_ACTION_CONSOLE_{ON,OFF} only restore ignore_per_console_loglevel when they forced it
+- Fully resolve loglevel before printk_delay (handles -1 case)
+- Prioritise user-specified console options over SPCR/DT
+- Synchronise console unregistration against atomic flushers in nbcon
+- Optimise printk_delay to avoid SRCU walk when no delay set
+- Restored accidentally deleted comment in console_srcu_read_flags
+- Removed extra put_device() in console unregistration
+- Changed open coded console_srcu_read_lock usage to functions
+- Removed redundant newcon->classdev = NULL initialisation
+- Fixed off-by-one errors in loglevel examples in docs (4 vs >4)
+- In docs clarified "messages won't appear" edge case
+- In docs, rewrote performance impact section per Petr
+- In docs, removed obsolete minimum_console_loglevel section
+- Removed redundant newcon->level init in try_enable_preferred_console
+- Split up commits some more where reasonable (with tags kept)
+- Make SYSLOG_ACTION_CONSOLE_{ON,OFF} only restore IPCL when they did it
 - Drop sysrq loglevel overrides, just use ignore_per_console_loglevel
 - Set options to NULL if empty so drivers keep baud
 - Copy console= option strings before stripping loglevel for mips/jazz
-- Restore console_srcu_read_flags() comment describing READ/WRITE pairing
-- Replace sysfs loglevel SRCU usage with lockless helpers
-- Fix grammar in deprecated sysfs attribute text
-- Correct examples in usage doc to be strictly less than
-- Replace performance impact section
-- Remove obsolete minimum_console_loglevel failure subsection
-- Clarify loglevels do not change data exposed in dmesg/syslogd
-- Parse message prefixes in printk_delay() for LOGLEVEL_DEFAULT
 - Initialise consoles with LOGLEVEL_DEFAULT so sysfs never exposes 0
-- Handle dev_set_name() failures when creating console class devices
-- Allow replacing previously parsed console= for ACPI/DT/etc
-- Split up commits a bit more (tags kept on splits, since the logic is the same)
 
 v7:
 
