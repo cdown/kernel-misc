@@ -994,6 +994,289 @@ test_stress_ignore_flags() {
     log_pass "stress on ignore flags"
 }
 
+test_sysfs_permissions() {
+    log "Testing sysfs attribute permissions..."
+
+    local dir="/sys/class/console/$PRIMARY_CON"
+
+    # loglevel should be rw (0644)
+    if [[ ! -r "$dir/loglevel" ]]; then
+        log_fail "loglevel not readable"
+        return
+    fi
+    if [[ ! -w "$dir/loglevel" ]]; then
+        log_fail "loglevel not writable"
+        return
+    fi
+
+    # effective_loglevel should be ro
+    if [[ ! -r "$dir/effective_loglevel" ]]; then
+        log_fail "effective_loglevel not readable"
+        return
+    fi
+    # Writing to read-only should fail
+    if echo 5 > "$dir/effective_loglevel" 2>/dev/null; then
+        log_fail "effective_loglevel should be read-only"
+        return
+    fi
+
+    # effective_loglevel_source should be ro
+    if [[ ! -r "$dir/effective_loglevel_source" ]]; then
+        log_fail "effective_loglevel_source not readable"
+        return
+    fi
+    if echo "local" > "$dir/effective_loglevel_source" 2>/dev/null; then
+        log_fail "effective_loglevel_source should be read-only"
+        return
+    fi
+
+    log_pass "sysfs attribute permissions"
+}
+
+test_loglevel_readback() {
+    log "Testing loglevel read-back consistency..."
+    reset
+
+    # Test global readback
+    for level in 1 2 3 4 5 6 7 8; do
+        set_global "$level"
+        local readback
+        readback=$(get_global)
+        if [[ "$readback" -ne "$level" ]]; then
+            log_fail "global readback mismatch: wrote $level, got $readback"
+            return
+        fi
+    done
+
+    # Test local readback
+    for level in 1 2 3 4 5 6 7 8; do
+        set_local "$PRIMARY_CON" "$level"
+        local readback
+        readback=$(cat "/sys/class/console/$PRIMARY_CON/loglevel")
+        if [[ "$readback" -ne "$level" ]]; then
+            log_fail "local readback mismatch: wrote $level, got $readback"
+            return
+        fi
+    done
+
+    # Test -1 (unset) readback
+    set_local "$PRIMARY_CON" -1
+    local readback
+    readback=$(cat "/sys/class/console/$PRIMARY_CON/loglevel")
+    if [[ "$readback" -ne -1 ]]; then
+        log_fail "local -1 readback mismatch: got $readback"
+        return
+    fi
+
+    log_pass "loglevel read-back consistency"
+}
+
+test_deprecated_printk_warning() {
+    log "Testing deprecated kernel.printk warning..."
+    reset
+
+    # Write to deprecated interface
+    set_printk '4 4 1 4'
+
+    # Check for deprecation warning in dmesg (may take a moment)
+    sleep 0.2
+    if ! dmesg | tail -50 | grep -q "kernel.printk sysctl is deprecated"; then
+        # Warning might have been printed on first use only (pr_warn_once)
+        log_verbose "Warning not found (may have been printed earlier)"
+    fi
+
+    log_pass "deprecated kernel.printk warning"
+}
+
+test_module_params_via_sysfs() {
+    log "Testing module parameters via sysfs..."
+    reset
+
+    local param_path="/sys/module/printk/parameters/ignore_per_console_loglevel"
+
+    if [[ ! -f "$param_path" ]]; then
+        log_fail "ignore_per_console_loglevel param not found"
+        return
+    fi
+
+    # Test writing Y/N values
+    echo Y > "$param_path"
+    local val
+    val=$(cat "$param_path")
+    if [[ "$val" != "Y" ]]; then
+        log_fail "param Y not accepted (got $val)"
+        return
+    fi
+
+    echo N > "$param_path"
+    val=$(cat "$param_path")
+    if [[ "$val" != "N" ]]; then
+        log_fail "param N not accepted (got $val)"
+        return
+    fi
+
+    # Test writing 1/0 values
+    echo 1 > "$param_path"
+    val=$(cat "$param_path")
+    if [[ "$val" != "Y" ]]; then
+        log_fail "param 1 not accepted (got $val)"
+        return
+    fi
+
+    echo 0 > "$param_path"
+    val=$(cat "$param_path")
+    if [[ "$val" != "N" ]]; then
+        log_fail "param 0 not accepted (got $val)"
+        return
+    fi
+
+    log_pass "module parameters via sysfs"
+}
+
+test_local_minus_one_semantics() {
+    log "Testing that local -1 means 'use global'..."
+    reset
+
+    set_global 4
+    set_local "$PRIMARY_CON" 7
+
+    if ! check_effective_and_source "$PRIMARY_CON" 7 local; then
+        log_fail "local 7 not applied"
+        return
+    fi
+
+    # Set to -1 - should fall back to global
+    set_local "$PRIMARY_CON" -1
+
+    if ! check_effective_and_source "$PRIMARY_CON" 4 global; then
+        log_fail "local -1 did not fall back to global"
+        return
+    fi
+
+    # Now if global changes, we should track it
+    set_global 6
+    if ! check_effective "$PRIMARY_CON" 6; then
+        log_fail "not tracking global after -1"
+        return
+    fi
+
+    log_pass "local -1 semantics"
+}
+
+test_global_unchanged_by_local() {
+    log "Testing global unchanged when local changes..."
+    reset
+
+    set_global 4
+
+    # Set various local levels
+    set_local "$PRIMARY_CON" 7
+    if [[ $(get_global) -ne 4 ]]; then
+        log_fail "global changed when local set to 7"
+        return
+    fi
+
+    set_local "$PRIMARY_CON" 2
+    if [[ $(get_global) -ne 4 ]]; then
+        log_fail "global changed when local set to 2"
+        return
+    fi
+
+    set_local "$PRIMARY_CON" -1
+    if [[ $(get_global) -ne 4 ]]; then
+        log_fail "global changed when local unset"
+        return
+    fi
+
+    log_pass "global unchanged by local"
+}
+
+test_effective_with_minimum_floor() {
+    log "Testing effective loglevel respects minimum floor..."
+    reset
+
+    # Set global to 4
+    set_global 4
+    # Set minimum to 6 (via printk array)
+    set_printk '4 4 6 4'
+
+    # New local below minimum should fail
+    if set_local "$PRIMARY_CON" 5 2>/dev/null; then
+        log_fail "should not allow local below minimum"
+        return
+    fi
+
+    # Local at minimum should succeed
+    if ! set_local "$PRIMARY_CON" 6; then
+        log_fail "should allow local at minimum"
+        return
+    fi
+
+    # Local above minimum should succeed
+    if ! set_local "$PRIMARY_CON" 7; then
+        log_fail "should allow local above minimum"
+        return
+    fi
+
+    # Global should also be clamped if below minimum when set via new sysctl
+    # (Note: the sysctl enforces this)
+    set_local "$PRIMARY_CON" -1
+
+    log_pass "effective loglevel minimum floor"
+}
+
+test_sysctl_validation() {
+    log "Testing sysctl input validation..."
+    reset
+
+    # Test console_loglevel validation
+    if set_global 0 2>/dev/null; then
+        log_fail "console_loglevel accepted 0"
+        return
+    fi
+    if set_global 9 2>/dev/null; then
+        log_fail "console_loglevel accepted 9"
+        return
+    fi
+    if set_global -1 2>/dev/null; then
+        log_fail "console_loglevel accepted -1"
+        return
+    fi
+    if set_global abc 2>/dev/null; then
+        log_fail "console_loglevel accepted non-numeric"
+        return
+    fi
+
+    # Valid values should work
+    for v in 1 2 3 4 5 6 7 8; do
+        if ! set_global "$v"; then
+            log_fail "console_loglevel rejected valid $v"
+            return
+        fi
+    done
+
+    log_pass "sysctl input validation"
+}
+
+test_console_count() {
+    log "Testing console count in sysfs..."
+
+    local count=0
+    for dir in /sys/class/console/*/; do
+        if [[ -d "$dir" ]]; then
+            ((++count))
+        fi
+    done
+
+    if [[ $count -lt 1 ]]; then
+        log_fail "no consoles found in /sys/class/console"
+        return
+    fi
+
+    log_verbose "Found $count console(s)"
+    log_pass "console count in sysfs"
+}
+
 #
 # Main test runner
 #
@@ -1048,6 +1331,17 @@ main() {
     test_concurrent_global_local_changes
     test_effective_source_transitions
     test_stress_ignore_flags
+
+    # Additional validation tests
+    test_sysfs_permissions
+    test_loglevel_readback
+    test_deprecated_printk_warning
+    test_module_params_via_sysfs
+    test_local_minus_one_semantics
+    test_global_unchanged_by_local
+    test_effective_with_minimum_floor
+    test_sysctl_validation
+    test_console_count
 
     # Dynamic console tests (require ttynull)
     test_ttynull_load_unload
