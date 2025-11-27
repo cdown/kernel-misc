@@ -25,7 +25,7 @@ cat << 'EOF' >> "$cov_file"
 
 v8:
 
-- Fully resolve loglevel before printk_delay (handles -1 case)
+- Fully resolve loglevel before printk_delay to aid LOGLEVEL_DEFAULT
 - Prioritise user-specified console options over SPCR/DT
 - Synchronise console unregistration against atomic flushers in nbcon
 - Optimise printk_delay to avoid SRCU walk when no delay set
