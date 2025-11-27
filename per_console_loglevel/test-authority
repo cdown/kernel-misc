@@ -458,7 +458,7 @@ test_sysrq_reset() {
     # Test 2: With local loglevel set, sysrq changes global but local still wins
     # (ignore_per_console_loglevel is only set during sysrq handler execution)
     set_local "$PRIMARY_CON" 5
-    set_sysrq 0  # sysrq 0 sets console_loglevel to 0, but that's clamped to 1
+    set_sysrq 3  # sysrq 3 sets console_loglevel to 3
 
     # Local should still be in effect after sysrq completes
     if ! check_effective_and_source "$PRIMARY_CON" 5 local; then
@@ -469,8 +469,25 @@ test_sysrq_reset() {
     # But global should have changed
     local global_level
     global_level=$(get_global)
+    if [[ "$global_level" -ne 3 ]]; then
+        log_fail "global changed by sysrq (got $global_level, expected 3)"
+        return
+    fi
+
+    # Test 3: sysrq 0 should be clamped to 1 (CONSOLE_LOGLEVEL_MIN)
+    set_local "$PRIMARY_CON" -1
+    set_sysrq 0
+    global_level=$(get_global)
     if [[ "$global_level" -ne 1 ]]; then
-        log_fail "global changed by sysrq (got $global_level, expected 1)"
+        log_fail "sysrq 0 clamped to 1 (got $global_level)"
+        return
+    fi
+
+    # Test 4: sysrq 9 should be clamped to 8 (LOGLEVEL_DEBUG + 1)
+    set_sysrq 9
+    global_level=$(get_global)
+    if [[ "$global_level" -ne 8 ]]; then
+        log_fail "sysrq 9 clamped to 8 (got $global_level)"
         return
     fi
 

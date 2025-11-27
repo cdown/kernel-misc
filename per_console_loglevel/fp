@@ -44,6 +44,7 @@ v8:
 - Set options to NULL if empty so drivers keep baud
 - Copy console= option strings before stripping loglevel for mips/jazz
 - Initialise consoles with LOGLEVEL_DEFAULT so sysfs never exposes 0
+- Clamp sysrq loglevels
 
 v7:
 
